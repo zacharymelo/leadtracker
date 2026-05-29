@@ -76,7 +76,8 @@ class modLeadtracker extends DolibarrModules
 			'css' => array(),
 			'js' => array(),
 			'hooks' => array(
-				'projectcard',
+				'data'   => array('elementproperties', 'projectcard'),
+				'entity' => '0',
 			),
 			'moduleforexternal' => 0,
 		);
@@ -131,8 +132,6 @@ class modLeadtracker extends DolibarrModules
 	{
 		$this->remove($options);
 
-		// _load_tables scans sql/ and runs each llx_*.sql file through run_sql(),
-		// which replaces llx_ with MAIN_DB_PREFIX when the prefix differs.
 		$result = $this->_load_tables('/leadtracker/sql/');
 		if ($result < 0) {
 			return -1;
@@ -149,7 +148,6 @@ class modLeadtracker extends DolibarrModules
 	 */
 	public function remove($options = '')
 	{
-		$sql = array();
-		return $this->_remove($sql, $options);
+		return $this->_remove(array(), $options);
 	}
 }

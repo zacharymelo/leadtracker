@@ -123,7 +123,6 @@ class LeadProgressRenderer
 
 		$circleInner = $this->circleGlyph($state);
 
-		// Action link on the current step only
 		$href = '';
 		$linkClass = 'leadtracker-link';
 
@@ -164,7 +163,6 @@ class LeadProgressRenderer
 	{
 		switch ($state) {
 			case LeadProgressResolver::STATE_COMPLETE:
-				return '<span class="leadtracker-glyph">&#10003;</span>';
 			case LeadProgressResolver::STATE_WON:
 				return '<span class="leadtracker-glyph">&#10003;</span>';
 			case LeadProgressResolver::STATE_LOST:

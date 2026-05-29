@@ -68,7 +68,7 @@ function leadtrackerAdminPrepareHead()
  */
 function leadtrackerProjectPassesFilter($projectId, $db)
 {
-	$mode  = getDolGlobalString('LEADTRACKER_FILTER_MODE', 'all');
+	$mode = getDolGlobalString('LEADTRACKER_FILTER_MODE', 'all');
 	if ($mode === 'all') {
 		return true;
 	}

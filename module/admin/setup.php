@@ -69,7 +69,6 @@ $allConditions = array(
 	'manual_only'           => 'LeadtrackerConditionManualOnly',
 );
 
-// Short column headers for the conditions matrix (full label used as title tooltip)
 $condShortHeaders = array(
 	'has_outbound_contact'  => $langs->trans('LeadtrackerConditionContactShort'),
 	'has_proposal'          => $langs->trans('LeadtrackerConditionProposalShort'),
@@ -101,7 +100,6 @@ if ($action == 'update') {
 	}
 
 	// --- Auto-advance conditions ---
-	// Reload stage rowids from DB so we know which stages exist
 	$sqlStages = "SELECT rowid FROM ".MAIN_DB_PREFIX."c_lead_status WHERE active = 1";
 	$resStages = $db->query($sqlStages);
 	$stageRowids = array();
@@ -199,9 +197,7 @@ if (!empty($stages)) {
 	}
 }
 
-// Load project categories for the flag selector (type=6 for projects in llx_categorie)
-$projectCatType = class_exists('Categorie') ? (int) Categorie::$MAP_ID_TO_CODE : 6; // fallback
-// MAP_ID_TO_CODE is the reverse map; the integer for 'project' type is 6
+// Load project categories for the flag selector (type = 6 for projects in llx_categorie)
 $projectCatTypeInt = 6;
 if (class_exists('Categorie')) {
 	$tmpCat = new Categorie($db);
@@ -289,7 +285,6 @@ print '<br>';
 print '<table class="noborder centpercent">';
 print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerFilterSectionTitle").'</td></tr>';
 
-// Filter mode
 print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerFilterMode").'</td><td>';
 print $form->selectarray('LEADTRACKER_FILTER_MODE', array(
 	'all'          => $langs->trans('LeadtrackerFilterAll'),
@@ -298,7 +293,6 @@ print $form->selectarray('LEADTRACKER_FILTER_MODE', array(
 ), $currentFilter, 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
 print '</td></tr>';
 
-// Category selector
 print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerFilterCategory").'</td><td>';
 if (count($cats) > 1) {
 	print $form->selectarray('LEADTRACKER_FLAG_CATEGORY_ID', $cats, $currentCatId, 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');

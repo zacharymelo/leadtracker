@@ -16,7 +16,7 @@
  */
 
 /**
- *  \file       core/triggers/interface_50_modLeadtracker_LeadtrackerTrigger.class.php
+ *  \file       core/triggers/interface_99_modLeadtracker_LeadtrackerTrigger.class.php
  *  \ingroup    leadtracker
  *  \brief      Trigger handler for Lead Tracker automation.
  */
@@ -24,15 +24,15 @@
 require_once DOL_DOCUMENT_ROOT.'/core/triggers/dolibarrtriggers.class.php';
 
 /**
- *  LeadtrackerTrigger
+ *  InterfaceLeadtrackerTrigger
  *
  *  Fires on native events (proposal validated/signed, order validated, invoice
  *  validated, action created) and delegates stage advancement to
  *  LeadtrackerAutomation.
  */
-class LeadtrackerTrigger extends DolibarrTriggers
+class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
-	public $name        = 'LeadtrackerTrigger';
+	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
 	public $version     = '1.0.0';
 	public $picto       = 'projectpub';

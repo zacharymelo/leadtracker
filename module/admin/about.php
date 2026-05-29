@@ -54,20 +54,21 @@ if (!$user->admin) {
 	accessforbidden();
 }
 
-$title = $langs->trans("About").' — '.$langs->trans("Module500121Name");
+$backtopage = GETPOST('backtopage', 'alpha');
+
+$title = $langs->trans("Module500121Name");
 llxHeader('', $title, '', '', 0, 0, '', '', '', 'mod-leadtracker page-admin-about');
 
-$linkback = '<a href="'.DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1">'.$langs->trans("BackToModuleList").'</a>';
+$linkback = '<a href="'.($backtopage ? $backtopage : DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';
 print load_fiche_titre($title, $linkback, 'projectpub');
 
 $head = leadtrackerAdminPrepareHead();
 print dol_get_fiche_head($head, 'about', $langs->trans("Module500121Name"), -1, 'projectpub');
 
-print '<div class="info">'.$langs->trans("Module500121Desc").'</div>';
-print '<br>';
-print '<table class="noborder">';
-print '<tr class="oddeven"><td>'.$langs->trans("Version").'</td><td>1.0.0</td></tr>';
-print '<tr class="oddeven"><td>'.$langs->trans("License").'</td><td>GPL-3.0-or-later</td></tr>';
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("Module500121Name").' 1.0.0</td></tr>';
+print '<tr class="oddeven"><td style="width:30%">'.$langs->trans("Description").'</td>';
+print '<td>'.$langs->trans("Module500121Desc").'</td></tr>';
 print '</table>';
 
 print dol_get_fiche_end();

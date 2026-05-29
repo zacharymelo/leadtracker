@@ -24,11 +24,11 @@
 /**
  *  ActionsLeadtracker
  *
- *  Loaded by Dolibarr's HookManager for the projectcard context. Uses
- *  formObjectOptions (NOT printCommonFooter — v22 silently discards resprints
- *  from printCommonFooter). A jQuery snippet relocates the rendered tracker to
- *  just below the card banner. All includes are deferred until formObjectOptions
- *  runs so that a missing file never causes a PHP fatal error on page load.
+ *  Loaded by Dolibarr's HookManager for the elementproperties and projectcard
+ *  contexts. Uses formObjectOptions (NOT printCommonFooter — v22 silently discards
+ *  resprints from printCommonFooter). A jQuery snippet relocates the rendered
+ *  tracker to just below the card banner. All includes are deferred until
+ *  formObjectOptions runs so that a missing file never causes a PHP fatal on load.
  */
 class ActionsLeadtracker
 {
@@ -45,7 +45,7 @@ class ActionsLeadtracker
 	public $results = array();
 
 	/** @var string */
-	public $resprints;
+	public $resprints = '';
 
 	/**
 	 *  @param  DoliDB  $db
@@ -56,19 +56,22 @@ class ActionsLeadtracker
 	}
 
 	/**
-	 *  Read a module constant with a default fallback.
+	 *  Register element type so Dolibarr can resolve it in linked-object lookups.
+	 *  Called by HookManager on the 'elementproperties' context.
 	 *
-	 *  @param  string  $name
-	 *  @param  string  $default
-	 *  @return string
+	 *  Lead Tracker has no business objects, so this always returns 0 with an
+	 *  empty results array. The method must exist to satisfy the hook contract
+	 *  whenever 'elementproperties' is listed in module_parts hooks.
+	 *
+	 *  @param  array       $parameters
+	 *  @param  object      $object
+	 *  @param  string      $action
+	 *  @param  HookManager $hookmanager
+	 *  @return int          0 = continue
 	 */
-	private function conf($name, $default = '')
+	public function getElementProperties($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf;
-		if (isset($conf->global->$name) && $conf->global->$name !== '') {
-			return $conf->global->$name;
-		}
-		return $default;
+		return 0;
 	}
 
 	/**
@@ -114,7 +117,7 @@ class ActionsLeadtracker
 			return 0;
 		}
 
-		// Defer includes until here so a missing file returns 0 instead of 500.
+		// Defer includes so a missing file returns 0 instead of a fatal error.
 		if (!class_exists('LeadProgressResolver')) {
 			dol_include_once('/leadtracker/class/leadprogressresolver.class.php');
 		}
@@ -143,54 +146,60 @@ class ActionsLeadtracker
 		}
 
 		$renderer = new LeadProgressRenderer();
-		$renderer->compact     = ($this->conf('LEADTRACKER_DISPLAY_MODE', 'full') === 'compact');
-		$renderer->hideSkipped = ($this->conf('LEADTRACKER_SKIPPED_BEHAVIOR', 'show') === 'hide');
-		$renderer->clickable   = ($this->conf('LEADTRACKER_CLICKABLE', '1') == '1');
-		$renderer->actionLinks = ($this->conf('LEADTRACKER_ACTION_LINKS', '1') == '1');
+		$renderer->compact     = ($this->getConf('LEADTRACKER_DISPLAY_MODE', 'full') === 'compact');
+		$renderer->hideSkipped = ($this->getConf('LEADTRACKER_SKIPPED_BEHAVIOR', 'show') === 'hide');
+		$renderer->clickable   = ($this->getConf('LEADTRACKER_CLICKABLE', '1') == '1');
+		$renderer->actionLinks = ($this->getConf('LEADTRACKER_ACTION_LINKS', '1') == '1');
 
-		$html = $renderer->render($steps, $user);
-		if (empty($html)) {
-			return 0;
+		ob_start();
+
+		$url = dol_buildpath('/leadtracker/css/leadtracker.css', 1);
+		print '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag($url).'">'."\n";
+
+		$this->printColorOverrides();
+
+		print '<div id="leadtracker-holder" style="display:none;">';
+		print $renderer->render($steps, $user);
+		print '</div>'."\n";
+
+		if ($this->getConf('LEADTRACKER_DEBUG', '0') == '1' && !empty($user->admin)) {
+			$this->printDebugPanel($resolver, $steps);
 		}
 
-		$out  = $this->stylesheet();
-		$out .= $this->colorOverrides();
+		$this->printRelocationScript();
 
-		$out .= '<div id="leadtracker-holder" style="display:none;">'.$html.'</div>';
-
-		if ($this->conf('LEADTRACKER_DEBUG', '0') == '1' && !empty($user->admin)) {
-			$out .= $this->debugPanel($resolver, $steps);
-		}
-
-		$out .= $this->relocationScript();
-
-		$this->resprints = $out;
+		$this->resprints = ob_get_clean();
 		return 0;
 	}
 
 	/**
-	 *  <link> tag for the module stylesheet.
+	 *  Read a module constant with a default fallback.
 	 *
+	 *  @param  string  $name
+	 *  @param  string  $default
 	 *  @return string
 	 */
-	private function stylesheet()
+	private function getConf($name, $default = '')
 	{
-		$url = dol_buildpath('/leadtracker/css/leadtracker.css', 1);
-		return '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag($url).'">'."\n";
+		global $conf;
+		if (isset($conf->global->$name) && $conf->global->$name !== '') {
+			return $conf->global->$name;
+		}
+		return $default;
 	}
 
 	/**
-	 *  Inline CSS custom-property overrides for admin-configured colors.
+	 *  Print inline CSS custom-property overrides for admin-configured colors.
 	 *
-	 *  @return string  HTML <style> block (may be empty)
+	 *  @return void
 	 */
-	private function colorOverrides()
+	private function printColorOverrides()
 	{
 		$vars = array(
-			'--leadtracker-complete' => $this->conf('LEADTRACKER_COLOR_COMPLETE', ''),
-			'--leadtracker-current'  => $this->conf('LEADTRACKER_COLOR_CURRENT', ''),
-			'--leadtracker-pending'  => $this->conf('LEADTRACKER_COLOR_PENDING', ''),
-			'--leadtracker-lost'     => $this->conf('LEADTRACKER_COLOR_LOST', ''),
+			'--leadtracker-complete' => $this->getConf('LEADTRACKER_COLOR_COMPLETE', ''),
+			'--leadtracker-current'  => $this->getConf('LEADTRACKER_COLOR_CURRENT', ''),
+			'--leadtracker-pending'  => $this->getConf('LEADTRACKER_COLOR_PENDING', ''),
+			'--leadtracker-lost'     => $this->getConf('LEADTRACKER_COLOR_LOST', ''),
 		);
 		$decl = '';
 		foreach ($vars as $name => $val) {
@@ -199,20 +208,19 @@ class ActionsLeadtracker
 				$decl .= $name.':'.$val.';';
 			}
 		}
-		if ($decl === '') {
-			return '';
+		if ($decl !== '') {
+			print '<style>.leadtracker-tracker{'.$decl.'}</style>'."\n";
 		}
-		return '<style>.leadtracker-tracker{'.$decl.'}</style>'."\n";
 	}
 
 	/**
-	 *  JS snippet that moves the hidden tracker to just below the card banner.
+	 *  Print the JS snippet that moves the hidden tracker to just below the card banner.
 	 *
-	 *  @return string
+	 *  @return void
 	 */
-	private function relocationScript()
+	private function printRelocationScript()
 	{
-		return "<script>\n"
+		print "<script>\n"
 			."jQuery(function(){\n"
 			." var holder = jQuery('#leadtracker-holder');\n"
 			." if (!holder.length) { return; }\n"
@@ -229,20 +237,19 @@ class ActionsLeadtracker
 	}
 
 	/**
-	 *  Admin-only debug panel.
+	 *  Print admin-only debug panel.
 	 *
 	 *  @param  LeadProgressResolver  $resolver
 	 *  @param  array                 $steps
-	 *  @return string
+	 *  @return void
 	 */
-	private function debugPanel($resolver, $steps)
+	private function printDebugPanel($resolver, $steps)
 	{
-		$out = '<div class="leadtracker-debug"><strong>Leadtracker debug</strong>';
-		$out .= ' &mdash; current code: '.dol_escape_htmltag($resolver->currentCode).'<br>';
+		print '<div class="leadtracker-debug"><strong>Leadtracker debug</strong>';
+		print ' &mdash; current code: '.dol_escape_htmltag($resolver->currentCode).'<br>';
 		foreach ($steps as $s) {
-			$out .= dol_escape_htmltag($s['key'].' => '.$s['state']).'<br>';
+			print dol_escape_htmltag($s['key'].' => '.$s['state']).'<br>';
 		}
-		$out .= '</div>';
-		return $out;
+		print '</div>';
 	}
 }

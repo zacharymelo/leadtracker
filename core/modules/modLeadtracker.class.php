@@ -122,6 +122,7 @@ class modLeadtracker extends DolibarrModules
 
 	/**
 	 *  Called when module is enabled. Creates the DB table and registers constants/permissions.
+	 *  Uses _load_tables() so run_sql() substitutes llx_ with MAIN_DB_PREFIX for non-default prefixes.
 	 *
 	 *  @param  string  $options  Options
 	 *  @return int                1 if OK, 0 if KO
@@ -130,13 +131,14 @@ class modLeadtracker extends DolibarrModules
 	{
 		$this->remove($options);
 
-		$sqlfile = dol_buildpath('/leadtracker/sql/llx_leadtracker_stage_config.sql', 0);
-		$sql = array();
-		if (file_exists($sqlfile)) {
-			$sql[] = file_get_contents($sqlfile);
+		// _load_tables scans sql/ and runs each llx_*.sql file through run_sql(),
+		// which replaces llx_ with MAIN_DB_PREFIX when the prefix differs.
+		$result = $this->_load_tables('/leadtracker/sql/');
+		if ($result < 0) {
+			return -1;
 		}
 
-		return $this->_init($sql, $options);
+		return $this->_init(array(), $options);
 	}
 
 	/**

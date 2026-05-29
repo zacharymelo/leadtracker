@@ -1,0 +1,38 @@
+# Lead Tracker — Français (fr_FR)
+# Copyright (C) 2026 Lead Tracker contributors
+# GPL-3.0-or-later
+
+# Identité du module
+Module500121Name = Lead Tracker
+Module500121Desc = Suivi visuel du pipeline et moteur d'automatisation pour les opportunités Dolibarr
+
+# UI
+LeadtrackerTitle = Pipeline commercial
+LeadtrackerNotApplicable = Non applicable
+
+# Configuration
+LeadtrackerSetup = Configuration du Lead Tracker
+LeadtrackerSetupPage = Configurez les étapes du pipeline et les conditions d'avancement automatique.
+LeadtrackerTabPipeline = Pipeline
+LeadtrackerTabDisplay = Affichage
+LeadtrackerPipelineTitle = Étapes du pipeline
+LeadtrackerPipelineHelp = Faites glisser les étapes pour les réordonner. Les noms des étapes sont gérés dans le dictionnaire Dolibarr (Accueil > Configuration > Dictionnaire > Statut des prospects).
+LeadtrackerConditions = Conditions d'avancement automatique
+LeadtrackerConditionHasContact = A un contact sortant (appel, e-mail, réunion)
+LeadtrackerConditionHasProposal = A au moins un devis
+LeadtrackerConditionHasSignedProposal = A un devis signé / accepté
+LeadtrackerConditionHasOrder = A une commande validée
+LeadtrackerConditionHasInvoice = A une facture validée
+LeadtrackerConditionManualOnly = Manuel uniquement (pas d'avancement automatique)
+LeadtrackerDisplayMode = Mode d'affichage
+LeadtrackerDisplayModeFull = Complet (cercles et libellés)
+LeadtrackerDisplayModeCompact = Compact (cercles uniquement)
+LeadtrackerClickable = Les étapes terminées renvoient vers leur document
+LeadtrackerActionLinks = Lien d'action sur l'étape courante
+LeadtrackerDebug = Sortie de débogage (administrateurs uniquement)
+LeadtrackerColors = Couleurs (laisser vide pour le thème par défaut)
+LeadtrackerColorComplete = Couleur des étapes terminées
+LeadtrackerColorCurrent = Couleur de l'étape courante
+LeadtrackerColorPending = Couleur des étapes en attente
+LeadtrackerColorLost = Couleur de l'étape perdue
+LeadtrackerColorHelp = Accepte un code hexadécimal (ex. #2e7d32), un nom de couleur CSS, ou rgb()/rgba().

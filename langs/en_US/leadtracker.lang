@@ -1,0 +1,38 @@
+# Lead Tracker — English (en_US)
+# Copyright (C) 2026 Lead Tracker contributors
+# GPL-3.0-or-later
+
+# Module identity
+Module500121Name = Lead Tracker
+Module500121Desc = Visual pipeline tracker and automation engine for Dolibarr opportunities
+
+# UI
+LeadtrackerTitle = Lead pipeline
+LeadtrackerNotApplicable = Not applicable
+
+# Setup
+LeadtrackerSetup = Lead Tracker setup
+LeadtrackerSetupPage = Configure the pipeline stages and automation conditions.
+LeadtrackerTabPipeline = Pipeline
+LeadtrackerTabDisplay = Display
+LeadtrackerPipelineTitle = Pipeline stages
+LeadtrackerPipelineHelp = Drag stages to reorder. Stage names are managed in Dolibarr's dictionary (Home > Setup > Dictionary > Lead status).
+LeadtrackerConditions = Auto-advance conditions
+LeadtrackerConditionHasContact = Has outbound contact (call, email, meeting)
+LeadtrackerConditionHasProposal = Has at least one proposal
+LeadtrackerConditionHasSignedProposal = Has a signed / accepted proposal
+LeadtrackerConditionHasOrder = Has a validated order
+LeadtrackerConditionHasInvoice = Has a validated invoice
+LeadtrackerConditionManualOnly = Manual only (never auto-advance)
+LeadtrackerDisplayMode = Display mode
+LeadtrackerDisplayModeFull = Full (circles and labels)
+LeadtrackerDisplayModeCompact = Compact (circles only)
+LeadtrackerClickable = Completed stages link to their document
+LeadtrackerActionLinks = Action link on current stage
+LeadtrackerDebug = Debug output (admins only)
+LeadtrackerColors = Colors (leave empty for theme default)
+LeadtrackerColorComplete = Completed color
+LeadtrackerColorCurrent = Current color
+LeadtrackerColorPending = Pending color
+LeadtrackerColorLost = Lost color
+LeadtrackerColorHelp = Accepts a hex code (e.g. #2e7d32), a CSS color name, or rgb()/rgba().

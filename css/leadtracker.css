@@ -1,0 +1,217 @@
+/* Lead Tracker styles.
+ *
+ * Colors use CSS custom properties so admins can override them via module
+ * configuration. Defaults aim to read well on Dolibarr's default (eldy) theme
+ * and degrade gracefully on dark themes.
+ */
+
+.leadtracker-tracker {
+	--leadtracker-complete: #2e7d32; /* green  */
+	--leadtracker-current:  #1976d2; /* blue   */
+	--leadtracker-pending:  #bdbdbd; /* grey   */
+	--leadtracker-won:      #2e7d32; /* green  */
+	--leadtracker-lost:     #c62828; /* red    */
+	--leadtracker-line:     #d0d0d0;
+
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 0;
+	width: 100%;
+	box-sizing: border-box;
+	margin: 10px 0 16px 0;
+	padding: 16px 10px 14px;
+	background: var(--colorbacktitle1, #fbfbfb);
+	border: 1px solid var(--colorblockborder, #e0e0e0);
+	border-radius: 6px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+	font-size: 12px;
+	line-height: 1.3;
+}
+
+.leadtracker-step {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex: 1 1 0;
+	min-width: 70px;
+	text-align: center;
+	padding: 0 2px;
+}
+
+/* Connector line drawn to the left of each step (except the first). */
+.leadtracker-connector {
+	position: absolute;
+	top: 14px;
+	right: 50%;
+	width: 100%;
+	height: 4px;
+	background: var(--leadtracker-line);
+	border-radius: 2px;
+	z-index: 0;
+}
+.leadtracker-connector-complete {
+	background: var(--leadtracker-complete);
+}
+
+.leadtracker-circle {
+	position: relative;
+	z-index: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: #ffffff;
+	border: 3px solid var(--leadtracker-pending);
+	color: #ffffff;
+	font-size: 13px;
+	font-weight: bold;
+	box-sizing: border-box;
+}
+
+.leadtracker-glyph {
+	line-height: 1;
+}
+
+.leadtracker-label {
+	display: block;
+	margin-top: 6px;
+	color: var(--colortexttitlenotab, #444);
+	max-width: 110px;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+}
+
+/* Links should not look like default underlined anchors. */
+.leadtracker-link {
+	text-decoration: none;
+	color: inherit;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.leadtracker-link:hover .leadtracker-label {
+	text-decoration: underline;
+}
+
+/* Action links (proceed with the next native step) get a clearer affordance. */
+.leadtracker-link.leadtracker-action {
+	cursor: pointer;
+}
+.leadtracker-link.leadtracker-action .leadtracker-label::after {
+	content: " \2192";
+	opacity: 0.7;
+}
+.leadtracker-link.leadtracker-action:hover .leadtracker-circle {
+	filter: brightness(1.08);
+	box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.18);
+}
+
+/* --- State styling --- */
+
+.leadtracker-complete .leadtracker-circle {
+	background: var(--leadtracker-complete);
+	border-color: var(--leadtracker-complete);
+}
+.leadtracker-current .leadtracker-circle {
+	background: var(--leadtracker-current);
+	border-color: var(--leadtracker-current);
+	box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.25);
+}
+.leadtracker-current .leadtracker-label {
+	font-weight: bold;
+}
+.leadtracker-pending .leadtracker-circle {
+	background: #ffffff;
+	border-color: var(--leadtracker-pending);
+	color: var(--leadtracker-pending);
+}
+.leadtracker-won .leadtracker-circle {
+	background: var(--leadtracker-won);
+	border-color: var(--leadtracker-won);
+	box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.25);
+}
+.leadtracker-won .leadtracker-label {
+	font-weight: bold;
+	color: var(--leadtracker-won);
+}
+.leadtracker-lost .leadtracker-circle {
+	background: var(--leadtracker-lost);
+	border-color: var(--leadtracker-lost);
+}
+.leadtracker-lost .leadtracker-label {
+	color: var(--leadtracker-lost);
+	font-weight: bold;
+}
+
+/* Pending stages after a terminal stage are visually muted */
+.leadtracker-lost ~ .leadtracker-step .leadtracker-circle,
+.leadtracker-won  ~ .leadtracker-step .leadtracker-circle {
+	opacity: 0.4;
+}
+.leadtracker-lost ~ .leadtracker-step .leadtracker-label,
+.leadtracker-won  ~ .leadtracker-step .leadtracker-label {
+	opacity: 0.4;
+}
+
+/* --- Compact mode: hide labels, keep circles in a tight row. --- */
+
+.leadtracker-tracker.leadtracker-compact {
+	padding: 8px 6px;
+}
+.leadtracker-tracker.leadtracker-compact .leadtracker-label {
+	display: none;
+}
+.leadtracker-tracker.leadtracker-compact .leadtracker-step {
+	min-width: 34px;
+}
+
+/* --- Debug panel --- */
+
+.leadtracker-debug {
+	margin: 6px 0 14px 0;
+	padding: 8px 10px;
+	border: 1px dashed #c62828;
+	border-radius: 4px;
+	background: #fff8f8;
+	font-family: monospace;
+	font-size: 11px;
+	color: #555;
+}
+
+/* --- Responsive: stack into a vertical timeline on narrow screens. --- */
+
+@media (max-width: 767px) {
+	.leadtracker-tracker {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 4px;
+	}
+	.leadtracker-step {
+		flex-direction: row;
+		align-items: center;
+		width: 100%;
+		min-width: 0;
+		text-align: left;
+		gap: 8px;
+		padding: 3px 0;
+	}
+	.leadtracker-connector {
+		display: none;
+	}
+	.leadtracker-label {
+		margin-top: 0;
+		max-width: none;
+	}
+	.leadtracker-link {
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
+	}
+	.leadtracker-tracker.leadtracker-compact .leadtracker-label {
+		display: block;
+	}
+}

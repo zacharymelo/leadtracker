@@ -156,24 +156,20 @@ class ActionsLeadtracker
 		$renderer->clickable   = ($this->getConf('LEADTRACKER_CLICKABLE', '1') == '1');
 		$renderer->actionLinks = ($this->getConf('LEADTRACKER_ACTION_LINKS', '1') == '1');
 
-		ob_start();
-
 		$url = dol_buildpath('/leadtracker/css/leadtracker.css', 1);
-		print '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag($url).'">'."\n";
-
-		$this->printColorOverrides();
-
-		print '<div id="leadtracker-holder" style="display:none;">';
-		print $renderer->render($steps, $user);
-		print '</div>'."\n";
+		$out  = '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag($url).'">'."\n";
+		$out .= $this->colorOverrides();
+		$out .= '<div id="leadtracker-holder" style="display:none;">';
+		$out .= $renderer->render($steps, $user);
+		$out .= '</div>'."\n";
 
 		if ($this->getConf('LEADTRACKER_DEBUG', '0') == '1' && !empty($user->admin)) {
-			$this->printDebugPanel($resolver, $steps);
+			$out .= $this->debugPanel($resolver, $steps, $object);
 		}
 
-		$this->printRelocationScript();
+		$out .= $this->relocationScript();
 
-		$this->resprints = ob_get_clean();
+		$this->resprints = $out;
 		return 0;
 	}
 
@@ -194,11 +190,11 @@ class ActionsLeadtracker
 	}
 
 	/**
-	 *  Print inline CSS custom-property overrides for admin-configured colors.
+	 *  Build inline CSS custom-property overrides for admin-configured colors.
 	 *
-	 *  @return void
+	 *  @return string
 	 */
-	private function printColorOverrides()
+	private function colorOverrides()
 	{
 		$vars = array(
 			'--leadtracker-complete' => $this->getConf('LEADTRACKER_COLOR_COMPLETE', ''),
@@ -214,18 +210,19 @@ class ActionsLeadtracker
 			}
 		}
 		if ($decl !== '') {
-			print '<style>.leadtracker-tracker{'.$decl.'}</style>'."\n";
+			return '<style>.leadtracker-tracker{'.$decl.'}</style>'."\n";
 		}
+		return '';
 	}
 
 	/**
-	 *  Print the JS snippet that moves the hidden tracker to just below the card banner.
+	 *  Build the JS snippet that moves the hidden tracker to just below the card banner.
 	 *
-	 *  @return void
+	 *  @return string
 	 */
-	private function printRelocationScript()
+	private function relocationScript()
 	{
-		print "<script>\n"
+		return "<script>\n"
 			."jQuery(function(){\n"
 			." var holder = jQuery('#leadtracker-holder');\n"
 			." if (!holder.length) { return; }\n"
@@ -242,19 +239,31 @@ class ActionsLeadtracker
 	}
 
 	/**
-	 *  Print admin-only debug panel.
+	 *  Build admin-only debug panel.
 	 *
 	 *  @param  LeadProgressResolver  $resolver
 	 *  @param  array                 $steps
-	 *  @return void
+	 *  @param  object                $object
+	 *  @return string
 	 */
-	private function printDebugPanel($resolver, $steps)
+	private function debugPanel($resolver, $steps, $object)
 	{
-		print '<div class="leadtracker-debug"><strong>Leadtracker debug</strong>';
-		print ' &mdash; current code: '.dol_escape_htmltag($resolver->currentCode).'<br>';
-		foreach ($steps as $s) {
-			print dol_escape_htmltag($s['key'].' => '.$s['state']).'<br>';
+		$out  = '<div class="leadtracker-debug"><strong>Leadtracker debug</strong>';
+		$out .= ' &mdash; fk_opp_status: '.dol_escape_htmltag((string) $object->fk_opp_status);
+		$out .= ' &mdash; current code: '.dol_escape_htmltag($resolver->currentCode).'<br>';
+
+		if (!empty($resolver->evidence)) {
+			$parts = array();
+			foreach ($resolver->evidence as $k => $v) {
+				$parts[] = dol_escape_htmltag($k).': '.($v ? '<b>yes</b>' : 'no');
+			}
+			$out .= '<em>evidence:</em> '.implode(' &nbsp;|&nbsp; ', $parts).'<br>';
 		}
-		print '</div>';
+
+		foreach ($steps as $s) {
+			$out .= dol_escape_htmltag($s['key'].' =&gt; '.$s['state']).'<br>';
+		}
+		$out .= '</div>';
+		return $out;
 	}
 }

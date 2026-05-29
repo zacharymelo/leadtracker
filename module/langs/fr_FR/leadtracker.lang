@@ -36,6 +36,17 @@ LeadtrackerConditionOrderShort = Commande
 LeadtrackerConditionInvoiceShort = Facture
 LeadtrackerConditionManualShort = Manuel
 
+# Section synchronisation des données
+LeadtrackerDataSyncTitle = Synchronisation des données
+LeadtrackerAmountMode = Source du montant
+LeadtrackerAmountModeManual = Manuel (jamais mis à jour automatiquement)
+LeadtrackerAmountModeAuto = Auto — hiérarchie LTV
+LeadtrackerAmountModeHelp = Le mode auto suit la valeur la plus proche de l'argent réel : les devis ouverts sont moyennés jusqu'à ce que l'un soit accepté, les devis acceptés sont remplacés par les commandes validées, et les commandes par les factures. Plusieurs factures et commandes s'accumulent en un total cumulatif (valeur à vie).
+LeadtrackerPercentMode = Probabilité (pourcentage)
+LeadtrackerPercentModeManual = Manuel (jamais mis à jour automatiquement)
+LeadtrackerPercentModeStageDefault = Auto — suivre la valeur par défaut de l'étape
+LeadtrackerPercentModeHelp = La valeur par défaut de l'étape est lue depuis Accueil > Configuration > Dictionnaire > Statuts des prospects et écrite sur le projet à chaque avancement.
+
 # Section filtre d'opportunités
 LeadtrackerFilterSectionTitle = Filtre d'opportunités
 LeadtrackerFilterUsageNote = Seuls les projets avec « Suivre l'opportunité » coché apparaissent dans le tracker — c'est la condition principale. Le filtre par catégorie ci-dessous affine davantage dans cet ensemble.

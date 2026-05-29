@@ -36,6 +36,17 @@ LeadtrackerConditionOrderShort = Order
 LeadtrackerConditionInvoiceShort = Invoice
 LeadtrackerConditionManualShort = Manual
 
+# Data sync section
+LeadtrackerDataSyncTitle = Data sync
+LeadtrackerAmountMode = Lead amount source
+LeadtrackerAmountModeManual = Manual (never auto-update)
+LeadtrackerAmountModeAuto = Auto — LTV hierarchy
+LeadtrackerAmountModeHelp = Auto mode tracks the closest-to-cash figure available: open proposals are averaged until one is accepted, accepted proposals are superseded by validated orders, and orders are superseded by invoices. Multiple invoices and orders accumulate as a running lifetime total.
+LeadtrackerPercentMode = Probability percentage
+LeadtrackerPercentModeManual = Manual (never auto-update)
+LeadtrackerPercentModeStageDefault = Auto — follow stage default
+LeadtrackerPercentModeHelp = Stage default reads the percentage configured in Home > Setup > Dictionary > Lead status and writes it to the project whenever the stage advances.
+
 # Opportunity filter section
 LeadtrackerFilterSectionTitle = Opportunity filter
 LeadtrackerFilterUsageNote = Only projects with "Follow opportunity" checked are ever shown in the tracker — that is the primary gate. The category filter below narrows further within that set.

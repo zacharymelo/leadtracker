@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.0.1';
+	public $version     = '1.1.1';
 	public $picto       = 'projectpub';
 
 	/**

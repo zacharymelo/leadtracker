@@ -125,6 +125,22 @@ if ($action == 'update') {
 		}
 	}
 
+	// --- Data sync ---
+	$amountMode = GETPOST('LEADTRACKER_AMOUNT_MODE', 'alpha');
+	if (!in_array($amountMode, array('manual', 'auto'))) {
+		$amountMode = 'manual';
+	}
+	if (dolibarr_set_const($db, 'LEADTRACKER_AMOUNT_MODE', $amountMode, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+	$percentMode = GETPOST('LEADTRACKER_PERCENT_MODE', 'alpha');
+	if (!in_array($percentMode, array('manual', 'stage_default'))) {
+		$percentMode = 'manual';
+	}
+	if (dolibarr_set_const($db, 'LEADTRACKER_PERCENT_MODE', $percentMode, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+
 	// --- Display ---
 	$boolKeys = array('LEADTRACKER_CLICKABLE', 'LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_DEBUG');
 	foreach ($boolKeys as $key) {
@@ -279,7 +295,37 @@ print '<br>';
 
 
 // ============================================================
-// SECTION 2 — Opportunity filter
+// SECTION 2 — Data sync (amount + percent)
+// ============================================================
+
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerDataSyncTitle").'</td></tr>';
+
+// Amount mode
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerAmountMode").'</td><td>';
+print $form->selectarray('LEADTRACKER_AMOUNT_MODE', array(
+	'manual' => $langs->trans('LeadtrackerAmountModeManual'),
+	'auto'   => $langs->trans('LeadtrackerAmountModeAuto'),
+), getDolGlobalString('LEADTRACKER_AMOUNT_MODE', 'manual'), 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
+print '</td></tr>';
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAmountModeHelp").'</span></td></tr>';
+
+// Percent mode
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerPercentMode").'</td><td>';
+print $form->selectarray('LEADTRACKER_PERCENT_MODE', array(
+	'manual'        => $langs->trans('LeadtrackerPercentModeManual'),
+	'stage_default' => $langs->trans('LeadtrackerPercentModeStageDefault'),
+), getDolGlobalString('LEADTRACKER_PERCENT_MODE', 'manual'), 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
+print '</td></tr>';
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerPercentModeHelp").'</span></td></tr>';
+
+print '</table>';
+
+print '<br>';
+
+
+// ============================================================
+// SECTION 4 — Opportunity filter
 // ============================================================
 
 print '<table class="noborder centpercent">';
@@ -313,7 +359,7 @@ print '<br>';
 
 
 // ============================================================
-// SECTION 3 — Display
+// SECTION 5 — Display
 // ============================================================
 
 print '<table class="noborder centpercent">';

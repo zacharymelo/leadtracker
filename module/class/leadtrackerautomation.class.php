@@ -18,18 +18,26 @@
 /**
  *  \file       class/leadtrackerautomation.class.php
  *  \ingroup    leadtracker
- *  \brief      Evaluates automation conditions and advances fk_opp_status.
+ *  \brief      Evaluates automation conditions and keeps pipeline data in sync.
  */
 
 /**
  *  LeadtrackerAutomation
  *
- *  Called from the trigger handler. Evaluates configured conditions against
- *  native linked data and writes llx_projet.fk_opp_status when a later stage
- *  is satisfied. Uses OR logic: the first satisfied condition wins and stops.
+ *  Called from the trigger handler on every relevant native event. Evaluates
+ *  configured conditions against linked data and advances fk_opp_status when a
+ *  later stage is satisfied (OR logic). Also recalculates opp_amount and
+ *  opp_percent on every call according to the module configuration, regardless
+ *  of whether the stage advances.
  *
- *  Respects the category flag filter configured in the module settings —
- *  projects that don't pass the filter are never auto-advanced.
+ *  Amount (LEADTRACKER_AMOUNT_MODE = 'auto') follows an LTV hierarchy:
+ *    1. Sum of validated invoices    — closest to real money
+ *    2. Sum of validated orders      — committed spend
+ *    3. Sum of accepted proposals    — confirmed intent
+ *    4. Average of open proposals    — estimated pipeline value
+ *
+ *  Percent (LEADTRACKER_PERCENT_MODE = 'stage_default') is read from the
+ *  llx_c_lead_status.percent column for the current stage.
  */
 class LeadtrackerAutomation
 {
@@ -46,6 +54,7 @@ class LeadtrackerAutomation
 
 	/**
 	 *  Evaluate stages after the current one and advance if any condition passes.
+	 *  Always recalculates project values (amount, percent) after the stage check.
 	 *
 	 *  @param  int  $projectId
 	 *  @return bool  True if the stage was advanced
@@ -54,7 +63,7 @@ class LeadtrackerAutomation
 	{
 		$projectId = (int) $projectId;
 
-		// Apply the category flag filter before doing anything.
+		// Apply category flag filter.
 		if (!function_exists('leadtrackerProjectPassesFilter')) {
 			dol_include_once('/leadtracker/lib/leadtracker.lib.php');
 		}
@@ -63,7 +72,7 @@ class LeadtrackerAutomation
 			return false;
 		}
 
-		// Load project
+		// Load project.
 		$sql = "SELECT rowid, fk_opp_status, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
 			." WHERE rowid = ".$projectId
 			." AND entity IN (".getEntity('projet').")";
@@ -72,20 +81,19 @@ class LeadtrackerAutomation
 			return false;
 		}
 
-		// Only auto-advance projects with the native "Follow opportunity" flag enabled.
+		// Only process projects with "Follow opportunity" enabled.
 		if (!(int) $proj->usage_opportunity) {
 			return false;
 		}
 
 		$currentFkStatus = (int) $proj->fk_opp_status;
 
-		// Load active pipeline stages
 		$stages = $this->loadStages();
 		if (empty($stages)) {
 			return false;
 		}
 
-		// Find the current stage position
+		// Find current stage position (needed for advancement, not for value updates).
 		$currentPos = null;
 		foreach ($stages as $stage) {
 			if ((int) $stage->rowid === $currentFkStatus) {
@@ -93,36 +101,253 @@ class LeadtrackerAutomation
 				break;
 			}
 		}
-		if ($currentPos === null) {
-			return false;
-		}
 
-		// Evaluate each later stage in position order
-		foreach ($stages as $stage) {
-			if ((int) $stage->position <= $currentPos) {
-				continue;
-			}
+		// Evaluate stages ahead of current and advance to the first one that passes.
+		// Skipped entirely when position is unknown (no stage set yet) — value
+		// updates still run below so amount is always kept fresh.
+		$newStatusId = null;
+		if ($currentPos !== null) {
+			foreach ($stages as $stage) {
+				if ((int) $stage->position <= $currentPos) {
+					continue;
+				}
 
-			$conditions = $this->loadConditions((int) $stage->rowid);
-			if (empty($conditions)) {
-				continue;
-			}
+				$conditions = $this->loadConditions((int) $stage->rowid);
+				if (empty($conditions)) {
+					continue;
+				}
 
-			$anyPassed = false;
-			foreach ($conditions as $cond) {
-				if ($this->evalCondition($cond->condition_type, $projectId)) {
-					$anyPassed = true;
+				$anyPassed = false;
+				foreach ($conditions as $cond) {
+					if ($this->evalCondition($cond->condition_type, $projectId)) {
+						$anyPassed = true;
+						break;
+					}
+				}
+
+				if ($anyPassed) {
+					$this->writeStage($projectId, (int) $stage->rowid);
+					$newStatusId = (int) $stage->rowid;
 					break;
 				}
 			}
+		}
 
-			if ($anyPassed) {
-				return $this->writeStage($projectId, (int) $stage->rowid);
+		// Always recalculate project values regardless of whether the stage advanced
+		// or whether a current stage was found — a new document always changes the
+		// LTV picture and should be reflected immediately.
+		$effectiveStatusId = ($newStatusId !== null) ? $newStatusId : $currentFkStatus;
+		$this->updateProjectValues($projectId, $effectiveStatusId);
+
+		return ($newStatusId !== null);
+	}
+
+	// -------------------------------------------------------------------------
+	// Project value updates (amount + percent)
+	// -------------------------------------------------------------------------
+
+	/**
+	 *  Recalculate opp_amount and/or opp_percent according to module config and
+	 *  write to llx_projet.
+	 *
+	 *  @param  int  $projectId
+	 *  @param  int  $statusId   Current (or new) fk_opp_status rowid
+	 *  @return bool
+	 */
+	private function updateProjectValues($projectId, $statusId)
+	{
+		$updates = array();
+
+		// Amount.
+		$amountMode = getDolGlobalString('LEADTRACKER_AMOUNT_MODE', 'manual');
+		if ($amountMode === 'auto') {
+			$amount = $this->calculateLtvAmount($projectId);
+			if ($amount !== null && $amount >= 0) {
+				$updates[] = "opp_amount = ".price2num($amount);
 			}
 		}
 
-		return false;
+		// Percent.
+		$percentMode = getDolGlobalString('LEADTRACKER_PERCENT_MODE', 'manual');
+		if ($percentMode === 'stage_default' && $statusId > 0) {
+			$percent = $this->getStagePercent($statusId);
+			if ($percent !== null) {
+				$updates[] = "opp_percent = ".(float) $percent;
+			}
+		}
+
+		if (empty($updates)) {
+			return true;
+		}
+
+		$sql = "UPDATE ".MAIN_DB_PREFIX."projet"
+			." SET ".implode(', ', $updates)
+			." WHERE rowid = ".(int) $projectId
+			." AND entity IN (".getEntity('projet').")";
+		return (bool) $this->db->query($sql);
 	}
+
+	/**
+	 *  Calculate the project's LTV-based opportunity amount.
+	 *
+	 *  Priority order (highest certainty wins):
+	 *    1. Sum of validated/paid invoices  — real money billed
+	 *    2. Sum of validated orders         — committed spend
+	 *    3. Sum of accepted proposals       — confirmed intent (fk_statut = 2 only)
+	 *    4. Average of open proposals       — estimated pipeline value
+	 *
+	 *  New documents at any level cause the relevant tier to recalculate.
+	 *  As invoices accumulate over time they sum for LTV tracking.
+	 *
+	 *  @param  int  $projectId
+	 *  @return float  Amount (0 if no linked documents)
+	 */
+	public function calculateLtvAmount($projectId)
+	{
+		// 1. Invoices: validated (1) or paid (2). Cancelled = -1, excluded by >= 1.
+		$invoiced = $this->sumLinkedDocTotals('facture', $projectId, 'fk_statut >= 1');
+		if ($invoiced > 0) {
+			return $invoiced;
+		}
+
+		// 2. Orders: validated (1), in progress (2), closed (3). Cancelled = -1.
+		$ordered = $this->sumLinkedDocTotals('commande', $projectId, 'fk_statut >= 1');
+		if ($ordered > 0) {
+			return $ordered;
+		}
+
+		// 3. Accepted proposals: exactly fk_statut = 2. Refused = 3, excluded deliberately.
+		$signed = $this->sumLinkedDocTotals('propal', $projectId, 'fk_statut = 2');
+		if ($signed > 0) {
+			return $signed;
+		}
+
+		// 4. Average of open proposals: draft (0) or validated/sent (1).
+		return $this->avgLinkedDocTotals('propal', $projectId, 'fk_statut IN (0, 1)');
+	}
+
+	/**
+	 *  Sum total_ttc of linked documents matching a status clause.
+	 *
+	 *  Checks both the direct fk_projet column and llx_element_element links.
+	 *  $statusWhere is a pre-constructed SQL fragment — only called internally
+	 *  with hardcoded safe values.
+	 *
+	 *  @param  string  $table        Table base name (without prefix)
+	 *  @param  int     $projectId
+	 *  @param  string  $statusWhere  Safe SQL WHERE fragment for fk_statut
+	 *  @return float
+	 */
+	private function sumLinkedDocTotals($table, $projectId, $statusWhere)
+	{
+		$ids = $this->collectLinkedDocIds($table, $projectId, $statusWhere);
+		if (empty($ids)) {
+			return 0;
+		}
+		$sql = "SELECT COALESCE(SUM(total_ttc), 0) as total"
+			." FROM ".MAIN_DB_PREFIX.$table
+			." WHERE rowid IN (".implode(',', $ids).")";
+		$res = $this->db->query($sql);
+		if ($res && $obj = $this->db->fetch_object($res)) {
+			return (float) $obj->total;
+		}
+		return 0;
+	}
+
+	/**
+	 *  Average total_ttc of linked documents matching a status clause.
+	 *
+	 *  @param  string  $table
+	 *  @param  int     $projectId
+	 *  @param  string  $statusWhere
+	 *  @return float
+	 */
+	private function avgLinkedDocTotals($table, $projectId, $statusWhere)
+	{
+		$ids = $this->collectLinkedDocIds($table, $projectId, $statusWhere);
+		if (empty($ids)) {
+			return 0;
+		}
+		$sql = "SELECT COALESCE(AVG(total_ttc), 0) as avg_total"
+			." FROM ".MAIN_DB_PREFIX.$table
+			." WHERE rowid IN (".implode(',', $ids).")";
+		$res = $this->db->query($sql);
+		if ($res && $obj = $this->db->fetch_object($res)) {
+			return (float) $obj->avg_total;
+		}
+		return 0;
+	}
+
+	/**
+	 *  Collect unique document rowids linked to the project via both fk_projet
+	 *  and llx_element_element, filtered by a status clause.
+	 *
+	 *  @param  string  $table        Table base name
+	 *  @param  int     $projectId
+	 *  @param  string  $statusWhere  Safe SQL WHERE fragment for fk_statut
+	 *  @return int[]                  Unique rowids
+	 */
+	private function collectLinkedDocIds($table, $projectId, $statusWhere)
+	{
+		$dbTable = MAIN_DB_PREFIX.$table;
+		$eeTable = MAIN_DB_PREFIX."element_element";
+		$pid     = (int) $projectId;
+		$tEsc    = $this->db->escape($table);
+		$ids     = array();
+
+		// Method 1: direct fk_projet column.
+		$sql1 = "SELECT rowid FROM ".$dbTable
+			." WHERE fk_projet = ".$pid
+			." AND ".$statusWhere
+			." AND entity IN (".getEntity($table).")";
+		$res = $this->db->query($sql1);
+		if ($res) {
+			while ($r = $this->db->fetch_object($res)) {
+				$ids[] = (int) $r->rowid;
+			}
+		}
+
+		// Method 2: element_element links.
+		$sql2 = "SELECT d.rowid FROM ".$dbTable." d"
+			." INNER JOIN ".$eeTable." ee ON ("
+			."  (ee.fk_source = ".$pid." AND ee.sourcetype = 'project'"
+			."   AND ee.fk_target = d.rowid AND ee.targettype = '".$tEsc."')"
+			."  OR"
+			."  (ee.fk_target = ".$pid." AND ee.targettype = 'project'"
+			."   AND ee.fk_source = d.rowid AND ee.sourcetype = '".$tEsc."')"
+			." )"
+			." WHERE d.".$statusWhere
+			." AND d.entity IN (".getEntity($table).")";
+		$res2 = $this->db->query($sql2);
+		if ($res2) {
+			while ($r = $this->db->fetch_object($res2)) {
+				$ids[] = (int) $r->rowid;
+			}
+		}
+
+		return array_values(array_unique($ids));
+	}
+
+	/**
+	 *  Read the default percentage for a stage from llx_c_lead_status.percent.
+	 *
+	 *  @param  int  $stageId  llx_c_lead_status.rowid
+	 *  @return float|null      Null if not found
+	 */
+	private function getStagePercent($stageId)
+	{
+		$sql = "SELECT percent FROM ".MAIN_DB_PREFIX."c_lead_status"
+			." WHERE rowid = ".(int) $stageId;
+		$res = $this->db->query($sql);
+		if ($res && $obj = $this->db->fetch_object($res)) {
+			return (float) $obj->percent;
+		}
+		return null;
+	}
+
+	// -------------------------------------------------------------------------
+	// Stage advancement helpers
+	// -------------------------------------------------------------------------
 
 	/**
 	 *  Evaluate a single condition type against the project's linked data.
@@ -137,13 +362,13 @@ class LeadtrackerAutomation
 			case 'has_outbound_contact':
 				return $this->hasOutboundContact($projectId);
 			case 'has_proposal':
-				return $this->hasProposal($projectId, 1);
+				return $this->hasLinkedDoc('propal', $projectId, 1);
 			case 'has_signed_proposal':
-				return $this->hasProposal($projectId, 2);
+				return $this->hasLinkedDoc('propal', $projectId, 2, true);
 			case 'has_order':
-				return $this->hasOrder($projectId);
+				return $this->hasLinkedDoc('commande', $projectId, 1);
 			case 'has_invoice':
-				return $this->hasInvoice($projectId);
+				return $this->hasLinkedDoc('facture', $projectId, 1);
 			case 'manual_only':
 				return false;
 			default:
@@ -174,7 +399,7 @@ class LeadtrackerAutomation
 	/**
 	 *  Load active automation conditions for a stage.
 	 *
-	 *  @param  int  $stageId  llx_c_lead_status.rowid
+	 *  @param  int  $stageId
 	 *  @return array
 	 */
 	private function loadConditions($stageId)
@@ -195,7 +420,7 @@ class LeadtrackerAutomation
 	}
 
 	/**
-	 *  At least one outbound call/email/meeting logged for the project.
+	 *  At least one outbound contact action linked to the project.
 	 *  Note: actioncomm uses fk_project (not fk_projet).
 	 *
 	 *  @param  int  $projectId
@@ -218,59 +443,27 @@ class LeadtrackerAutomation
 	}
 
 	/**
-	 *  At least one proposal linked to the project with status >= $minStatus.
+	 *  Check for at least one linked document meeting the status threshold.
+	 *  Checks both fk_projet column and llx_element_element.
 	 *
-	 *  @param  int  $projectId
-	 *  @param  int  $minStatus  1=validated, 2=signed
-	 *  @return bool
-	 */
-	private function hasProposal($projectId, $minStatus)
-	{
-		return $this->hasLinkedDoc('propal', $projectId, $minStatus);
-	}
-
-	/**
-	 *  At least one validated customer order linked to the project.
-	 *
-	 *  @param  int  $projectId
-	 *  @return bool
-	 */
-	private function hasOrder($projectId)
-	{
-		return $this->hasLinkedDoc('commande', $projectId, 1);
-	}
-
-	/**
-	 *  At least one validated customer invoice linked to the project.
-	 *
-	 *  @param  int  $projectId
-	 *  @return bool
-	 */
-	private function hasInvoice($projectId)
-	{
-		return $this->hasLinkedDoc('facture', $projectId, 1);
-	}
-
-	/**
-	 *  Check BOTH fk_projet and llx_element_element for a linked document.
-	 *
-	 *  @param  string  $table      Table base name (without prefix)
+	 *  @param  string  $table     Table base name
 	 *  @param  int     $projectId
-	 *  @param  int     $minStatus  Minimum fk_statut value required
+	 *  @param  int     $status    Status value
+	 *  @param  bool    $exact     True = exact match; false = >= status
 	 *  @return bool
 	 */
-	private function hasLinkedDoc($table, $projectId, $minStatus)
+	private function hasLinkedDoc($table, $projectId, $status, $exact = false)
 	{
-		$dbTable   = MAIN_DB_PREFIX.$table;
-		$eeTable   = MAIN_DB_PREFIX."element_element";
-		$minStatus = (int) $minStatus;
-		$projectId = (int) $projectId;
-		$tEsc      = $this->db->escape($table);
+		$dbTable  = MAIN_DB_PREFIX.$table;
+		$eeTable  = MAIN_DB_PREFIX."element_element";
+		$status   = (int) $status;
+		$pid      = (int) $projectId;
+		$tEsc     = $this->db->escape($table);
+		$statusOp = $exact ? " = ".$status : " >= ".$status;
 
-		// Method 1: direct fk_projet column
 		$sql1 = "SELECT COUNT(rowid) as cnt FROM ".$dbTable
-			." WHERE fk_projet = ".$projectId
-			." AND fk_statut >= ".$minStatus
+			." WHERE fk_projet = ".$pid
+			." AND fk_statut".$statusOp
 			." AND entity IN (".getEntity($table).")";
 		$res = $this->db->query($sql1);
 		if ($res) {
@@ -280,17 +473,16 @@ class LeadtrackerAutomation
 			}
 		}
 
-		// Method 2: element_element join (links added after document creation)
 		$sql2 = "SELECT COUNT(d.rowid) as cnt"
 			." FROM ".$dbTable." d"
 			." INNER JOIN ".$eeTable." ee ON ("
-			."  (ee.fk_source = ".$projectId." AND ee.sourcetype = 'project'"
+			."  (ee.fk_source = ".$pid." AND ee.sourcetype = 'project'"
 			."   AND ee.fk_target = d.rowid AND ee.targettype = '".$tEsc."')"
 			."  OR"
-			."  (ee.fk_target = ".$projectId." AND ee.targettype = 'project'"
+			."  (ee.fk_target = ".$pid." AND ee.targettype = 'project'"
 			."   AND ee.fk_source = d.rowid AND ee.sourcetype = '".$tEsc."')"
 			." )"
-			." WHERE d.fk_statut >= ".$minStatus
+			." WHERE d.fk_statut".$statusOp
 			." AND d.entity IN (".getEntity($table).")";
 		$res2 = $this->db->query($sql2);
 		if ($res2) {
@@ -304,10 +496,10 @@ class LeadtrackerAutomation
 	}
 
 	/**
-	 *  Write the new stage to llx_projet.
+	 *  Write a new stage rowid to llx_projet.
 	 *
 	 *  @param  int  $projectId
-	 *  @param  int  $newStatusId  llx_c_lead_status.rowid
+	 *  @param  int  $newStatusId
 	 *  @return bool
 	 */
 	private function writeStage($projectId, $newStatusId)

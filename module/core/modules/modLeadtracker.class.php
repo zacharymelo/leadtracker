@@ -58,7 +58,7 @@ class modLeadtracker extends DolibarrModules
 		$this->editor_name = 'Lead Tracker contributors';
 		$this->editor_url = '';
 
-		$this->version = '1.0.1';
+		$this->version = '1.1.1';
 
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 
@@ -108,6 +108,8 @@ class modLeadtracker extends DolibarrModules
 			array('LEADTRACKER_COLOR_CURRENT',    'chaine', '',     'Override color for current stage (empty = theme)', 0),
 			array('LEADTRACKER_COLOR_PENDING',    'chaine', '',     'Override color for pending stages (empty = theme)', 0),
 			array('LEADTRACKER_COLOR_LOST',       'chaine', '',     'Override color for lost stage (empty = theme)', 0),
+			array('LEADTRACKER_AMOUNT_MODE',      'chaine', 'manual', 'Amount source: manual | auto (LTV hierarchy)', 0),
+			array('LEADTRACKER_PERCENT_MODE',     'chaine', 'manual', 'Percent source: manual | stage_default', 0),
 		);
 
 		$this->rights = array();

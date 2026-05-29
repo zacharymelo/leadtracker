@@ -284,6 +284,7 @@ print '<br>';
 
 print '<table class="noborder centpercent">';
 print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerFilterSectionTitle").'</td></tr>';
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerFilterUsageNote").'</span></td></tr>';
 
 print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerFilterMode").'</td><td>';
 print $form->selectarray('LEADTRACKER_FILTER_MODE', array(

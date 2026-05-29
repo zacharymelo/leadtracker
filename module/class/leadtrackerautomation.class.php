@@ -64,11 +64,16 @@ class LeadtrackerAutomation
 		}
 
 		// Load project
-		$sql = "SELECT rowid, fk_opp_status FROM ".MAIN_DB_PREFIX."projet"
+		$sql = "SELECT rowid, fk_opp_status, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
 			." WHERE rowid = ".$projectId
 			." AND entity IN (".getEntity('projet').")";
 		$res = $this->db->query($sql);
 		if (!$res || !($proj = $this->db->fetch_object($res))) {
+			return false;
+		}
+
+		// Only auto-advance projects with the native "Follow opportunity" flag enabled.
+		if (!(int) $proj->usage_opportunity) {
 			return false;
 		}
 

@@ -38,7 +38,8 @@ LeadtrackerConditionManualShort = Manual
 
 # Opportunity filter section
 LeadtrackerFilterSectionTitle = Opportunity filter
-LeadtrackerFilterSectionHelp = Restrict the tracker to specific deals using a project category as a flag. Select "Track all projects" to disable filtering. If you haven't created a category yet, use the link below.
+LeadtrackerFilterUsageNote = Only projects with "Follow opportunity" checked are ever shown in the tracker — that is the primary gate. The category filter below narrows further within that set.
+LeadtrackerFilterSectionHelp = Optionally restrict the tracker to a subset of opportunity projects using a project category as a flag. Select "Track all projects" to disable additional filtering.
 LeadtrackerFilterMode = Filter mode
 LeadtrackerFilterAll = Track all projects
 LeadtrackerFilterHasCategory = Track only projects with the selected category

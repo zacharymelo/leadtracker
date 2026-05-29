@@ -38,7 +38,8 @@ LeadtrackerConditionManualShort = Manuel
 
 # Section filtre d'opportunités
 LeadtrackerFilterSectionTitle = Filtre d'opportunités
-LeadtrackerFilterSectionHelp = Limitez le tracker à des deals spécifiques en utilisant une catégorie de projet comme indicateur. Sélectionnez « Suivre tous les projets » pour désactiver le filtrage. Si aucune catégorie n'existe encore, utilisez le lien ci-dessous.
+LeadtrackerFilterUsageNote = Seuls les projets avec « Suivre l'opportunité » coché apparaissent dans le tracker — c'est la condition principale. Le filtre par catégorie ci-dessous affine davantage dans cet ensemble.
+LeadtrackerFilterSectionHelp = Restreignez optionnellement le tracker à un sous-ensemble de projets opportunités via une catégorie de projet. Sélectionnez « Suivre tous les projets » pour désactiver le filtrage supplémentaire.
 LeadtrackerFilterMode = Mode de filtrage
 LeadtrackerFilterAll = Suivre tous les projets
 LeadtrackerFilterHasCategory = Suivre uniquement les projets avec la catégorie sélectionnée

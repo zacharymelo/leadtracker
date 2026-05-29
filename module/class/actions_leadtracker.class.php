@@ -104,6 +104,11 @@ class ActionsLeadtracker
 			return 0;
 		}
 
+		// Only track projects with the native "Follow opportunity" flag enabled.
+		if (empty($object->usage_opportunity)) {
+			return 0;
+		}
+
 		// Deduplication guard — some card pages call the hook more than once per request.
 		static $rendered = array();
 		$renderKey = $object->element.':'.$object->id;

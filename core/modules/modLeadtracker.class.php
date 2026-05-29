@@ -96,15 +96,17 @@ class modLeadtracker extends DolibarrModules
 		$this->warnings_activation_ext = array();
 
 		$this->const = array(
-			array('LEADTRACKER_DISPLAY_MODE',    'chaine', 'full',  'Display mode: full or compact', 0),
-			array('LEADTRACKER_SKIPPED_BEHAVIOR','chaine', 'show',  'Skipped steps: show or hide', 0),
-			array('LEADTRACKER_CLICKABLE',       'chaine', '1',     'Completed stages link to their document', 0),
-			array('LEADTRACKER_ACTION_LINKS',    'chaine', '1',     'Current stage links to next native action', 0),
-			array('LEADTRACKER_DEBUG',           'chaine', '0',     'Show debug output to admins only', 0),
-			array('LEADTRACKER_COLOR_COMPLETE',  'chaine', '',      'Override color for completed stages (empty = theme)', 0),
-			array('LEADTRACKER_COLOR_CURRENT',   'chaine', '',      'Override color for current stage (empty = theme)', 0),
-			array('LEADTRACKER_COLOR_PENDING',   'chaine', '',      'Override color for pending stages (empty = theme)', 0),
-			array('LEADTRACKER_COLOR_LOST',      'chaine', '',      'Override color for lost stage (empty = theme)', 0),
+			array('LEADTRACKER_FILTER_MODE',      'chaine', 'all',  'Opportunity filter: all | has_category | no_category', 0),
+			array('LEADTRACKER_FLAG_CATEGORY_ID', 'chaine', '0',    'Category rowid used as follow flag (0 = none)', 0),
+			array('LEADTRACKER_DISPLAY_MODE',     'chaine', 'full', 'Display mode: full or compact', 0),
+			array('LEADTRACKER_SKIPPED_BEHAVIOR', 'chaine', 'show', 'Skipped steps: show or hide', 0),
+			array('LEADTRACKER_CLICKABLE',        'chaine', '1',    'Completed stages link to their document', 0),
+			array('LEADTRACKER_ACTION_LINKS',     'chaine', '1',    'Current stage links to next native action', 0),
+			array('LEADTRACKER_DEBUG',            'chaine', '0',    'Show debug output to admins only', 0),
+			array('LEADTRACKER_COLOR_COMPLETE',   'chaine', '',     'Override color for completed stages (empty = theme)', 0),
+			array('LEADTRACKER_COLOR_CURRENT',    'chaine', '',     'Override color for current stage (empty = theme)', 0),
+			array('LEADTRACKER_COLOR_PENDING',    'chaine', '',     'Override color for pending stages (empty = theme)', 0),
+			array('LEADTRACKER_COLOR_LOST',       'chaine', '',     'Override color for lost stage (empty = theme)', 0),
 		);
 
 		$this->rights = array();

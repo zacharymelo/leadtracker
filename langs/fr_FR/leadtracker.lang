@@ -10,29 +10,57 @@ Module500121Desc = Suivi visuel du pipeline et moteur d'automatisation pour les 
 LeadtrackerTitle = Pipeline commercial
 LeadtrackerNotApplicable = Non applicable
 
-# Configuration
+# Page de configuration
 LeadtrackerSetup = Configuration du Lead Tracker
-LeadtrackerSetupPage = Configurez les étapes du pipeline et les conditions d'avancement automatique.
-LeadtrackerTabPipeline = Pipeline
-LeadtrackerTabDisplay = Affichage
-LeadtrackerPipelineTitle = Étapes du pipeline
-LeadtrackerPipelineHelp = Faites glisser les étapes pour les réordonner. Les noms des étapes sont gérés dans le dictionnaire Dolibarr (Accueil > Configuration > Dictionnaire > Statut des prospects).
-LeadtrackerConditions = Conditions d'avancement automatique
+LeadtrackerSetupPage = Configurez les conditions d'avancement automatique, le filtre d'opportunités et les options d'affichage.
+
+# Section conditions d'avancement automatique
+LeadtrackerAutoSectionTitle = Conditions d'avancement automatique
+LeadtrackerAutoSectionHelp = Cochez les conditions qui déclenchent l'avancement automatique d'une étape. Toute condition cochée suffit à faire avancer le deal (logique OU). L'ordre des étapes est géré dans Accueil > Configuration > Dictionnaire > Statuts des prospects.
+LeadtrackerNoStages = Aucune étape de pipeline active trouvée.
+LeadtrackerGoToDictionary = Configurer les statuts →
+
+# Types de conditions — libellés complets (utilisés dans les infobulles)
 LeadtrackerConditionHasContact = A un contact sortant (appel, e-mail, réunion)
 LeadtrackerConditionHasProposal = A au moins un devis
 LeadtrackerConditionHasSignedProposal = A un devis signé / accepté
 LeadtrackerConditionHasOrder = A une commande validée
 LeadtrackerConditionHasInvoice = A une facture validée
 LeadtrackerConditionManualOnly = Manuel uniquement (pas d'avancement automatique)
+
+# Types de conditions — en-têtes courts pour le tableau
+LeadtrackerConditionContactShort = Contact
+LeadtrackerConditionProposalShort = Devis
+LeadtrackerConditionSignedShort = Signé
+LeadtrackerConditionOrderShort = Commande
+LeadtrackerConditionInvoiceShort = Facture
+LeadtrackerConditionManualShort = Manuel
+
+# Section filtre d'opportunités
+LeadtrackerFilterSectionTitle = Filtre d'opportunités
+LeadtrackerFilterSectionHelp = Limitez le tracker à des deals spécifiques en utilisant une catégorie de projet comme indicateur. Sélectionnez « Suivre tous les projets » pour désactiver le filtrage. Si aucune catégorie n'existe encore, utilisez le lien ci-dessous.
+LeadtrackerFilterMode = Mode de filtrage
+LeadtrackerFilterAll = Suivre tous les projets
+LeadtrackerFilterHasCategory = Suivre uniquement les projets avec la catégorie sélectionnée
+LeadtrackerFilterNoCategory = Ignorer les projets avec la catégorie sélectionnée
+LeadtrackerFilterCategory = Catégorie indicateur
+LeadtrackerFilterCategoryNone = (aucune)
+LeadtrackerFilterNoCategoriesYet = Aucune catégorie de projet trouvée.
+LeadtrackerGoToCategories = En créer une →
+
+# Section affichage
+LeadtrackerDisplayOptions = Affichage
 LeadtrackerDisplayMode = Mode d'affichage
 LeadtrackerDisplayModeFull = Complet (cercles et libellés)
 LeadtrackerDisplayModeCompact = Compact (cercles uniquement)
-LeadtrackerClickable = Les étapes terminées renvoient vers leur document
-LeadtrackerActionLinks = Lien d'action sur l'étape courante
-LeadtrackerDebug = Sortie de débogage (administrateurs uniquement)
+LeadtrackerActionLinks = Afficher le lien d'action sur l'étape courante
+LeadtrackerDebug = Sortie de débogage
+LeadtrackerDebugHelp = Visible pour les administrateurs uniquement.
+
+# Couleurs
 LeadtrackerColors = Couleurs (laisser vide pour le thème par défaut)
 LeadtrackerColorComplete = Couleur des étapes terminées
 LeadtrackerColorCurrent = Couleur de l'étape courante
 LeadtrackerColorPending = Couleur des étapes en attente
 LeadtrackerColorLost = Couleur de l'étape perdue
-LeadtrackerColorHelp = Accepte un code hexadécimal (ex. #2e7d32), un nom de couleur CSS, ou rgb()/rgba().
+LeadtrackerColorHelp = Accepte un code hex (#2e7d32), un nom de couleur CSS, ou rgb()/rgba().

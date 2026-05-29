@@ -46,6 +46,9 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
+if (!class_exists('Categorie')) {
+	require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
+}
 dol_include_once('/leadtracker/lib/leadtracker.lib.php');
 
 $langs->loadLangs(array("admin", "leadtracker@leadtracker"));
@@ -55,13 +58,8 @@ if (!$user->admin) {
 }
 
 $action     = GETPOST('action', 'aZ09');
-$activeTab  = GETPOST('tab', 'alpha');
-if (!in_array($activeTab, array('pipeline', 'display'))) {
-	$activeTab = 'pipeline';
-}
 $backtopage = GETPOST('backtopage', 'alpha');
 
-// Condition types available per stage
 $allConditions = array(
 	'has_outbound_contact'  => 'LeadtrackerConditionHasContact',
 	'has_proposal'          => 'LeadtrackerConditionHasProposal',
@@ -71,17 +69,14 @@ $allConditions = array(
 	'manual_only'           => 'LeadtrackerConditionManualOnly',
 );
 
-$boolKeys = array(
-	'LEADTRACKER_CLICKABLE',
-	'LEADTRACKER_ACTION_LINKS',
-	'LEADTRACKER_DEBUG',
-);
-
-$colorKeys = array(
-	'LEADTRACKER_COLOR_COMPLETE',
-	'LEADTRACKER_COLOR_CURRENT',
-	'LEADTRACKER_COLOR_PENDING',
-	'LEADTRACKER_COLOR_LOST',
+// Short column headers for the conditions matrix (full label used as title tooltip)
+$condShortHeaders = array(
+	'has_outbound_contact'  => $langs->trans('LeadtrackerConditionContactShort'),
+	'has_proposal'          => $langs->trans('LeadtrackerConditionProposalShort'),
+	'has_signed_proposal'   => $langs->trans('LeadtrackerConditionSignedShort'),
+	'has_order'             => $langs->trans('LeadtrackerConditionOrderShort'),
+	'has_invoice'           => $langs->trans('LeadtrackerConditionInvoiceShort'),
+	'manual_only'           => $langs->trans('LeadtrackerConditionManualShort'),
 );
 
 
@@ -89,9 +84,51 @@ $colorKeys = array(
  * Actions
  */
 
-if ($action == 'update_display') {
+if ($action == 'update') {
 	$error = 0;
 
+	// --- Opportunity filter ---
+	$filterMode = GETPOST('LEADTRACKER_FILTER_MODE', 'alpha');
+	if (!in_array($filterMode, array('all', 'has_category', 'no_category'))) {
+		$filterMode = 'all';
+	}
+	if (dolibarr_set_const($db, 'LEADTRACKER_FILTER_MODE', $filterMode, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+	$catId = (int) GETPOST('LEADTRACKER_FLAG_CATEGORY_ID', 'int');
+	if (dolibarr_set_const($db, 'LEADTRACKER_FLAG_CATEGORY_ID', (string) $catId, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+
+	// --- Auto-advance conditions ---
+	// Reload stage rowids from DB so we know which stages exist
+	$sqlStages = "SELECT rowid FROM ".MAIN_DB_PREFIX."c_lead_status WHERE active = 1";
+	$resStages = $db->query($sqlStages);
+	$stageRowids = array();
+	if ($resStages) {
+		while ($obj = $db->fetch_object($resStages)) {
+			$stageRowids[] = (int) $obj->rowid;
+		}
+	}
+
+	foreach ($stageRowids as $sid) {
+		$db->query("DELETE FROM ".MAIN_DB_PREFIX."leadtracker_stage_config"
+			." WHERE fk_lead_status = ".$sid." AND entity = ".(int) $conf->entity);
+
+		foreach (array_keys($allConditions) as $ctype) {
+			if (GETPOST('cond_'.$sid.'_'.$ctype, 'alpha')) {
+				$sqlIns = "INSERT INTO ".MAIN_DB_PREFIX."leadtracker_stage_config"
+					." (fk_lead_status, condition_type, active, entity)"
+					." VALUES (".$sid.", '".$db->escape($ctype)."', 1, ".(int) $conf->entity.")";
+				if (!$db->query($sqlIns)) {
+					$error++;
+				}
+			}
+		}
+	}
+
+	// --- Display ---
+	$boolKeys = array('LEADTRACKER_CLICKABLE', 'LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_DEBUG');
 	foreach ($boolKeys as $key) {
 		$val = GETPOST($key, 'alpha') ? '1' : '0';
 		if (dolibarr_set_const($db, $key, $val, 'chaine', 0, '', $conf->entity) < 0) {
@@ -107,14 +144,7 @@ if ($action == 'update_display') {
 		$error++;
 	}
 
-	$skip = GETPOST('LEADTRACKER_SKIPPED_BEHAVIOR', 'alpha');
-	if (!in_array($skip, array('show', 'hide'))) {
-		$skip = 'show';
-	}
-	if (dolibarr_set_const($db, 'LEADTRACKER_SKIPPED_BEHAVIOR', $skip, 'chaine', 0, '', $conf->entity) < 0) {
-		$error++;
-	}
-
+	$colorKeys = array('LEADTRACKER_COLOR_COMPLETE', 'LEADTRACKER_COLOR_CURRENT', 'LEADTRACKER_COLOR_PENDING', 'LEADTRACKER_COLOR_LOST');
 	foreach ($colorKeys as $key) {
 		$val = trim(GETPOST($key, 'alpha'));
 		if ($val !== '' && !preg_match('/^#[0-9a-fA-F]{3,8}$|^[a-zA-Z]+$|^rgba?\([0-9,\s\.%]+\)$/', $val)) {
@@ -130,76 +160,6 @@ if ($action == 'update_display') {
 	} else {
 		setEventMessages($langs->trans("Error"), null, 'errors');
 	}
-	$activeTab = 'display';
-}
-
-if ($action == 'update_pipeline') {
-	$error = 0;
-
-	// Load stages to get their rowids
-	$sqlStages = "SELECT rowid FROM ".MAIN_DB_PREFIX."c_lead_status WHERE active = 1 ORDER BY position ASC";
-	$resStages = $db->query($sqlStages);
-	$stageRowids = array();
-	if ($resStages) {
-		while ($obj = $db->fetch_object($resStages)) {
-			$stageRowids[] = (int) $obj->rowid;
-		}
-	}
-
-	// Reorder: positions submitted as stage_order_<idx> = rowid
-	$newOrder = GETPOST('stage_order', 'array');
-	if (!empty($newOrder) && is_array($newOrder)) {
-		$db->begin();
-		$pos = 10;
-		$orderFailed = false;
-		foreach ($newOrder as $rowid) {
-			$rowid = (int) $rowid;
-			if (!$rowid) {
-				continue;
-			}
-			$sqlUpd = "UPDATE ".MAIN_DB_PREFIX."c_lead_status SET position = ".$pos." WHERE rowid = ".$rowid;
-			if (!$db->query($sqlUpd)) {
-				$orderFailed = true;
-				break;
-			}
-			$pos += 10;
-		}
-		if ($orderFailed) {
-			$db->rollback();
-			$error++;
-		} else {
-			$db->commit();
-		}
-	}
-
-	// Save conditions for each stage
-	foreach ($stageRowids as $sid) {
-		// Delete existing conditions for this stage / entity
-		$sqlDel = "DELETE FROM ".MAIN_DB_PREFIX."leadtracker_stage_config"
-			." WHERE fk_lead_status = ".$sid
-			." AND entity = ".(int) $conf->entity;
-		$db->query($sqlDel);
-
-		// Insert checked conditions
-		foreach (array_keys($allConditions) as $ctype) {
-			$postKey = 'cond_'.$sid.'_'.$ctype;
-			if (GETPOST($postKey, 'alpha')) {
-				$sqlIns = "INSERT INTO ".MAIN_DB_PREFIX."leadtracker_stage_config"
-					." (fk_lead_status, condition_type, active, entity)"
-					." VALUES (".$sid.", '".$db->escape($ctype)."', 1, ".(int) $conf->entity.")";
-				if (!$db->query($sqlIns)) {
-					$error++;
-				}
-			}
-		}
-	}
-
-	if (!$error) {
-		setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
-	} else {
-		setEventMessages($langs->trans("Error"), null, 'errors');
-	}
-	$activeTab = 'pipeline';
 }
 
 
@@ -209,8 +169,61 @@ if ($action == 'update_pipeline') {
 
 $form = new Form($db);
 
+// Load pipeline stages for the conditions matrix
+$sqlStages = "SELECT rowid, code, label, position FROM ".MAIN_DB_PREFIX."c_lead_status"
+	." WHERE active = 1 ORDER BY position ASC";
+$resStages = $db->query($sqlStages);
+$stages = array();
+if ($resStages) {
+	while ($obj = $db->fetch_object($resStages)) {
+		$stages[] = $obj;
+	}
+}
+
+// Load current conditions for all stages
+$condMap = array();
+if (!empty($stages)) {
+	$sids = array();
+	foreach ($stages as $s) {
+		$sids[] = (int) $s->rowid;
+	}
+	$sqlConds = "SELECT fk_lead_status, condition_type FROM ".MAIN_DB_PREFIX."leadtracker_stage_config"
+		." WHERE fk_lead_status IN (".implode(',', $sids).")"
+		." AND active = 1"
+		." AND entity = ".(int) $conf->entity;
+	$resConds = $db->query($sqlConds);
+	if ($resConds) {
+		while ($obj = $db->fetch_object($resConds)) {
+			$condMap[(int) $obj->fk_lead_status][$obj->condition_type] = true;
+		}
+	}
+}
+
+// Load project categories for the flag selector (type=6 for projects in llx_categorie)
+$projectCatType = class_exists('Categorie') ? (int) Categorie::$MAP_ID_TO_CODE : 6; // fallback
+// MAP_ID_TO_CODE is the reverse map; the integer for 'project' type is 6
+$projectCatTypeInt = 6;
+if (class_exists('Categorie')) {
+	$tmpCat = new Categorie($db);
+	$projectCatTypeInt = isset($tmpCat->MAP_ID['project']) ? (int) $tmpCat->MAP_ID['project'] : 6;
+}
+$cats = array(0 => '— '.$langs->trans('LeadtrackerFilterCategoryNone').' —');
+$sqlCats = "SELECT rowid, label FROM ".MAIN_DB_PREFIX."categorie"
+	." WHERE type = ".$projectCatTypeInt
+	." AND entity IN (".getEntity('categorie').")"
+	." ORDER BY label ASC";
+$resCats = $db->query($sqlCats);
+if ($resCats) {
+	while ($obj = $db->fetch_object($resCats)) {
+		$cats[(int) $obj->rowid] = $obj->label;
+	}
+}
+
+$currentCatId  = (int) getDolGlobalString('LEADTRACKER_FLAG_CATEGORY_ID', '0');
+$currentFilter = getDolGlobalString('LEADTRACKER_FILTER_MODE', 'all');
+
 $title = $langs->trans("LeadtrackerSetup");
-llxHeader('', $title, '', '', 0, 0, array(DOL_URL_ROOT.'/includes/jquery/plugins/jquery-ui/jquery-ui.min.js'), array(), '', 'mod-leadtracker page-admin');
+llxHeader('', $title, '', '', 0, 0, '', '', '', 'mod-leadtracker page-admin');
 
 $linkback = '<a href="'.($backtopage ? $backtopage : DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';
 print load_fiche_titre($title, $linkback, 'projectpub');
@@ -220,165 +233,135 @@ print dol_get_fiche_head($head, 'settings', $langs->trans("Module500121Name"), -
 
 print '<span class="opacitymedium">'.$langs->trans("LeadtrackerSetupPage").'</span><br><br>';
 
-// Tab switcher
-print '<div class="tabsAction">';
-$tabUrl = $_SERVER["PHP_SELF"];
-print '<a class="butAction'.($activeTab == 'pipeline' ? 'Selected' : '').'" href="'.$tabUrl.'?tab=pipeline">'.$langs->trans("LeadtrackerTabPipeline").'</a>';
-print ' ';
-print '<a class="butAction'.($activeTab == 'display' ? 'Selected' : '').'" href="'.$tabUrl.'?tab=display">'.$langs->trans("LeadtrackerTabDisplay").'</a>';
-print '</div><br>';
+print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
+print '<input type="hidden" name="action" value="update">';
 
 
 // ============================================================
-// PIPELINE TAB
+// SECTION 1 — Auto-advance conditions
 // ============================================================
 
-if ($activeTab == 'pipeline') {
-	// Load stages
-	$sqlStages = "SELECT rowid, code, label, position FROM ".MAIN_DB_PREFIX."c_lead_status"
-		." WHERE active = 1 ORDER BY position ASC";
-	$resStages = $db->query($sqlStages);
-	$stages = array();
-	if ($resStages) {
-		while ($obj = $db->fetch_object($resStages)) {
-			$stages[] = $obj;
-		}
-	}
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre">';
+print '<td>'.$langs->trans("LeadtrackerAutoSectionTitle").'</td>';
+foreach ($allConditions as $ctype => $langKey) {
+	$shortLabel = isset($condShortHeaders[$ctype]) ? $condShortHeaders[$ctype] : $langs->trans($langKey);
+	print '<td class="center" style="min-width:60px;" title="'.dol_escape_htmltag($langs->trans($langKey)).'">';
+	print dol_escape_htmltag($shortLabel);
+	print '</td>';
+}
+print '</tr>';
 
-	// Load current conditions for all stages
-	$condMap = array();
-	if (!empty($stages)) {
-		$sids = array();
-		foreach ($stages as $s) {
-			$sids[] = (int) $s->rowid;
-		}
-		$sqlConds = "SELECT fk_lead_status, condition_type FROM ".MAIN_DB_PREFIX."leadtracker_stage_config"
-			." WHERE fk_lead_status IN (".implode(',', $sids).")"
-			." AND active = 1"
-			." AND entity = ".(int) $conf->entity;
-		$resConds = $db->query($sqlConds);
-		if ($resConds) {
-			while ($obj = $db->fetch_object($resConds)) {
-				$condMap[(int) $obj->fk_lead_status][$obj->condition_type] = true;
-			}
-		}
-	}
-
-	print '<p class="opacitymedium">'.$langs->trans("LeadtrackerPipelineHelp").'</p>';
-
-	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
-	print '<input type="hidden" name="token" value="'.newToken().'">';
-	print '<input type="hidden" name="action" value="update_pipeline">';
-	print '<input type="hidden" name="tab" value="pipeline">';
-
-	print '<ul id="leadtracker-stage-list" style="list-style:none;padding:0;margin:0;">';
+if (empty($stages)) {
+	print '<tr class="oddeven"><td colspan="'.(1 + count($allConditions)).'">';
+	print '<span class="opacitymedium">'.$langs->trans("LeadtrackerNoStages").'</span> ';
+	print '<a href="'.DOL_URL_ROOT.'/admin/dict.php?id=lead_status">'.$langs->trans("LeadtrackerGoToDictionary").'</a>';
+	print '</td></tr>';
+} else {
 	foreach ($stages as $stage) {
 		$sid = (int) $stage->rowid;
-		print '<input type="hidden" name="stage_order[]" value="'.$sid.'" class="lt-order-input" data-id="'.$sid.'">';
-		print '<li class="lt-stage-row" data-id="'.$sid.'" style="border:1px solid #ddd;border-radius:4px;padding:12px 16px;margin-bottom:8px;background:#fafafa;">';
-		print '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">';
-		print '<span class="lt-drag-handle" style="cursor:grab;font-size:18px;color:#aaa;" title="'.$langs->trans("DragDrop").'">&#9776;</span>';
-		print '<strong>'.dol_escape_htmltag($langs->trans($stage->label) !== $stage->label ? $langs->trans($stage->label) : $stage->label).'</strong>';
-		print ' <span class="opacitymedium" style="font-size:11px;">['.dol_escape_htmltag($stage->code).']</span>';
-		print '</div>';
-		print '<div style="display:flex;flex-wrap:wrap;gap:16px;">';
-		foreach ($allConditions as $ctype => $langKey) {
+		$stageLabel = $langs->trans($stage->label) !== $stage->label ? $langs->trans($stage->label) : $stage->label;
+		print '<tr class="oddeven">';
+		print '<td><strong>'.dol_escape_htmltag($stageLabel).'</strong>'
+			.' <span class="opacitymedium" style="font-size:11px;">['.dol_escape_htmltag($stage->code).']</span></td>';
+		foreach (array_keys($allConditions) as $ctype) {
 			$checked = !empty($condMap[$sid][$ctype]) ? ' checked' : '';
-			$postKey = 'cond_'.$sid.'_'.$ctype;
-			print '<label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;">';
-			print '<input type="checkbox" name="'.$postKey.'" value="1"'.$checked.'>';
-			print dol_escape_htmltag($langs->trans($langKey));
-			print '</label>';
+			print '<td class="center">';
+			print '<input type="checkbox" name="cond_'.$sid.'_'.$ctype.'" value="1"'.$checked.'>';
+			print '</td>';
 		}
-		print '</div>';
-		print '</li>';
+		print '</tr>';
 	}
-	print '</ul>';
-
-	print '<br>';
-	print $form->buttonsSaveCancel("Save", '');
-	print '</form>';
-
-	// Sortable JS
-	print '<script>
-jQuery(function(){
-  jQuery("#leadtracker-stage-list").sortable({
-    handle: ".lt-drag-handle",
-    update: function(){
-      jQuery("#leadtracker-stage-list li").each(function(idx){
-        var id = jQuery(this).data("id");
-        jQuery(".lt-order-input[data-id="+id+"]").val(id);
-      });
-      // rebuild the hidden order inputs in DOM order
-      var inputs = [];
-      jQuery("#leadtracker-stage-list li").each(function(){
-        inputs.push(jQuery(this).data("id"));
-      });
-      jQuery(".lt-order-input").each(function(idx){
-        jQuery(this).val(inputs[idx]);
-      });
-    }
-  });
-  jQuery("#leadtracker-stage-list").disableSelection();
-});
-</script>';
 }
+print '<tr><td colspan="'.(1 + count($allConditions)).'">';
+print '<span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAutoSectionHelp").'</span>';
+print '</td></tr>';
+print '</table>';
+
+print '<br>';
 
 
 // ============================================================
-// DISPLAY TAB
+// SECTION 2 — Opportunity filter
 // ============================================================
 
-if ($activeTab == 'display') {
-	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
-	print '<input type="hidden" name="token" value="'.newToken().'">';
-	print '<input type="hidden" name="action" value="update_display">';
-	print '<input type="hidden" name="tab" value="display">';
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerFilterSectionTitle").'</td></tr>';
 
-	print '<table class="noborder centpercent">';
-	print '<tr class="liste_titre"><td>'.$langs->trans("LeadtrackerDisplayMode").'</td><td width="220"></td></tr>';
+// Filter mode
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerFilterMode").'</td><td>';
+print $form->selectarray('LEADTRACKER_FILTER_MODE', array(
+	'all'          => $langs->trans('LeadtrackerFilterAll'),
+	'has_category' => $langs->trans('LeadtrackerFilterHasCategory'),
+	'no_category'  => $langs->trans('LeadtrackerFilterNoCategory'),
+), $currentFilter, 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
+print '</td></tr>';
 
-	print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDisplayMode").'</td><td>';
-	$modeval = getDolGlobalString('LEADTRACKER_DISPLAY_MODE', 'full');
-	print $form->selectarray('LEADTRACKER_DISPLAY_MODE', array(
-		'full'    => $langs->trans('LeadtrackerDisplayModeFull'),
-		'compact' => $langs->trans('LeadtrackerDisplayModeCompact'),
-	), $modeval);
-	print '</td></tr>';
-
-	print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerClickable").'</td><td>';
-	print '<input type="checkbox" name="LEADTRACKER_CLICKABLE" value="1"'.(getDolGlobalString('LEADTRACKER_CLICKABLE') ? ' checked' : '').'>';
-	print '</td></tr>';
-
-	print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerActionLinks").'</td><td>';
-	print '<input type="checkbox" name="LEADTRACKER_ACTION_LINKS" value="1"'.(getDolGlobalString('LEADTRACKER_ACTION_LINKS') ? ' checked' : '').'>';
-	print '</td></tr>';
-
-	print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDebug").'</td><td>';
-	print '<input type="checkbox" name="LEADTRACKER_DEBUG" value="1"'.(getDolGlobalString('LEADTRACKER_DEBUG') ? ' checked' : '').'>';
-	print '</td></tr>';
-
-	print '</table><br>';
-
-	print '<table class="noborder centpercent">';
-	print '<tr class="liste_titre"><td>'.$langs->trans("LeadtrackerColors").'</td><td width="220"></td></tr>';
-	$colorRows = array(
-		'LEADTRACKER_COLOR_COMPLETE' => 'LeadtrackerColorComplete',
-		'LEADTRACKER_COLOR_CURRENT'  => 'LeadtrackerColorCurrent',
-		'LEADTRACKER_COLOR_PENDING'  => 'LeadtrackerColorPending',
-		'LEADTRACKER_COLOR_LOST'     => 'LeadtrackerColorLost',
-	);
-	foreach ($colorRows as $key => $lkey) {
-		print '<tr class="oddeven"><td>'.$langs->trans($lkey).'</td><td>';
-		print '<input type="text" name="'.$key.'" value="'.dol_escape_htmltag(getDolGlobalString($key)).'" placeholder="#2e7d32" size="14">';
-		print '</td></tr>';
-	}
-	print '<tr><td colspan="2"><span class="opacitymedium">'.$langs->trans("LeadtrackerColorHelp").'</span></td></tr>';
-	print '</table>';
-
-	print $form->buttonsSaveCancel("Save", '');
-	print '</form>';
+// Category selector
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerFilterCategory").'</td><td>';
+if (count($cats) > 1) {
+	print $form->selectarray('LEADTRACKER_FLAG_CATEGORY_ID', $cats, $currentCatId, 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
+} else {
+	print '<span class="opacitymedium">'.$langs->trans("LeadtrackerFilterNoCategoriesYet").'</span>';
+	print ' <a href="'.DOL_URL_ROOT.'/categories/index.php?type=project">'.$langs->trans("LeadtrackerGoToCategories").'</a>';
+	print '<input type="hidden" name="LEADTRACKER_FLAG_CATEGORY_ID" value="0">';
 }
+print '</td></tr>';
+
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">';
+print $langs->trans("LeadtrackerFilterSectionHelp");
+print '</span></td></tr>';
+print '</table>';
+
+print '<br>';
+
+
+// ============================================================
+// SECTION 3 — Display
+// ============================================================
+
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerDisplayOptions").'</td></tr>';
+
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerDisplayMode").'</td><td>';
+print $form->selectarray('LEADTRACKER_DISPLAY_MODE', array(
+	'full'    => $langs->trans('LeadtrackerDisplayModeFull'),
+	'compact' => $langs->trans('LeadtrackerDisplayModeCompact'),
+), getDolGlobalString('LEADTRACKER_DISPLAY_MODE', 'full'), 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerActionLinks").'</td><td>';
+print '<input type="checkbox" name="LEADTRACKER_ACTION_LINKS" value="1"'.(getDolGlobalString('LEADTRACKER_ACTION_LINKS', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDebug").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDebugHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEBUG" value="1"'.(getDolGlobalString('LEADTRACKER_DEBUG') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '</table>';
+
+print '<br>';
+
+// Colors
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerColors").'</td></tr>';
+$colorRows = array(
+	'LEADTRACKER_COLOR_COMPLETE' => 'LeadtrackerColorComplete',
+	'LEADTRACKER_COLOR_CURRENT'  => 'LeadtrackerColorCurrent',
+	'LEADTRACKER_COLOR_PENDING'  => 'LeadtrackerColorPending',
+	'LEADTRACKER_COLOR_LOST'     => 'LeadtrackerColorLost',
+);
+foreach ($colorRows as $key => $lkey) {
+	print '<tr class="oddeven"><td style="width:40%">'.$langs->trans($lkey).'</td><td>';
+	print '<input type="text" name="'.$key.'" value="'.dol_escape_htmltag(getDolGlobalString($key)).'" placeholder="#2e7d32" size="14">';
+	print '</td></tr>';
+}
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerColorHelp").'</span></td></tr>';
+print '</table>';
+
+print $form->buttonsSaveCancel("Save", '');
+print '</form>';
 
 print dol_get_fiche_end();
 

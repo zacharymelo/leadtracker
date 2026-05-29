@@ -27,6 +27,9 @@
  *  Called from the trigger handler. Evaluates configured conditions against
  *  native linked data and writes llx_projet.fk_opp_status when a later stage
  *  is satisfied. Uses OR logic: the first satisfied condition wins and stops.
+ *
+ *  Respects the category flag filter configured in the module settings —
+ *  projects that don't pass the filter are never auto-advanced.
  */
 class LeadtrackerAutomation
 {
@@ -51,6 +54,15 @@ class LeadtrackerAutomation
 	{
 		$projectId = (int) $projectId;
 
+		// Apply the category flag filter before doing anything.
+		if (!function_exists('leadtrackerProjectPassesFilter')) {
+			dol_include_once('/leadtracker/lib/leadtracker.lib.php');
+		}
+		if (function_exists('leadtrackerProjectPassesFilter')
+			&& !leadtrackerProjectPassesFilter($projectId, $this->db)) {
+			return false;
+		}
+
 		// Load project
 		$sql = "SELECT rowid, fk_opp_status FROM ".MAIN_DB_PREFIX."projet"
 			." WHERE rowid = ".$projectId
@@ -68,7 +80,7 @@ class LeadtrackerAutomation
 			return false;
 		}
 
-		// Find current position
+		// Find the current stage position
 		$currentPos = null;
 		foreach ($stages as $stage) {
 			if ((int) $stage->rowid === $currentFkStatus) {
@@ -80,7 +92,7 @@ class LeadtrackerAutomation
 			return false;
 		}
 
-		// Evaluate each later stage in order
+		// Evaluate each later stage in position order
 		foreach ($stages as $stage) {
 			if ((int) $stage->position <= $currentPos) {
 				continue;
@@ -179,6 +191,7 @@ class LeadtrackerAutomation
 
 	/**
 	 *  At least one outbound call/email/meeting logged for the project.
+	 *  Note: actioncomm uses fk_project (not fk_projet).
 	 *
 	 *  @param  int  $projectId
 	 *  @return bool
@@ -203,7 +216,7 @@ class LeadtrackerAutomation
 	 *  At least one proposal linked to the project with status >= $minStatus.
 	 *
 	 *  @param  int  $projectId
-	 *  @param  int  $minStatus   1 = validated, 2 = signed
+	 *  @param  int  $minStatus  1=validated, 2=signed
 	 *  @return bool
 	 */
 	private function hasProposal($projectId, $minStatus)
@@ -236,7 +249,7 @@ class LeadtrackerAutomation
 	/**
 	 *  Check BOTH fk_projet and llx_element_element for a linked document.
 	 *
-	 *  @param  string  $table      Dolibarr table base name (without prefix)
+	 *  @param  string  $table      Table base name (without prefix)
 	 *  @param  int     $projectId
 	 *  @param  int     $minStatus  Minimum fk_statut value required
 	 *  @return bool

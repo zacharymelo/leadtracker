@@ -21,16 +21,14 @@
  *  \brief      Hook handler — injects the pipeline tracker into project card pages.
  */
 
-dol_include_once('/leadtracker/class/leadprogressresolver.class.php');
-dol_include_once('/leadtracker/class/leadprogressrenderer.class.php');
-
 /**
  *  ActionsLeadtracker
  *
- *  Loaded by Dolibarr's HookManager for the contexts declared in the module
- *  descriptor. Uses formObjectOptions (NOT printCommonFooter — Dolibarr v22
- *  silently discards resprints from printCommonFooter). A jQuery snippet
- *  relocates the rendered tracker to just below the card banner.
+ *  Loaded by Dolibarr's HookManager for the projectcard context. Uses
+ *  formObjectOptions (NOT printCommonFooter — v22 silently discards resprints
+ *  from printCommonFooter). A jQuery snippet relocates the rendered tracker to
+ *  just below the card banner. All includes are deferred until formObjectOptions
+ *  runs so that a missing file never causes a PHP fatal error on page load.
  */
 class ActionsLeadtracker
 {
@@ -98,12 +96,12 @@ class ActionsLeadtracker
 			return 0;
 		}
 
-		// Only project cards
+		// Only project cards. Project::$element = 'project' in Dolibarr v14+.
 		if ($object->element !== 'project') {
 			return 0;
 		}
 
-		// Deduplication guard — some cards invoke the hook more than once per request
+		// Deduplication guard — some card pages call the hook more than once per request.
 		static $rendered = array();
 		$renderKey = $object->element.':'.$object->id;
 		if (isset($rendered[$renderKey])) {
@@ -113,6 +111,26 @@ class ActionsLeadtracker
 
 		// Permission check
 		if (!$user->hasRight('leadtracker', 'read')) {
+			return 0;
+		}
+
+		// Defer includes until here so a missing file returns 0 instead of 500.
+		if (!class_exists('LeadProgressResolver')) {
+			dol_include_once('/leadtracker/class/leadprogressresolver.class.php');
+		}
+		if (!class_exists('LeadProgressRenderer')) {
+			dol_include_once('/leadtracker/class/leadprogressrenderer.class.php');
+		}
+		if (!class_exists('LeadProgressResolver') || !class_exists('LeadProgressRenderer')) {
+			return 0;
+		}
+		if (!function_exists('leadtrackerProjectPassesFilter')) {
+			dol_include_once('/leadtracker/lib/leadtracker.lib.php');
+		}
+
+		// Category flag filter — only show tracker for qualifying projects.
+		if (function_exists('leadtrackerProjectPassesFilter')
+			&& !leadtrackerProjectPassesFilter((int) $object->id, $this->db)) {
 			return 0;
 		}
 

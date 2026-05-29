@@ -18,7 +18,7 @@
 /**
  *  \file       lib/leadtracker.lib.php
  *  \ingroup    leadtracker
- *  \brief      Library functions for the Leadtracker module admin pages.
+ *  \brief      Shared utilities and admin tab helper for the Lead Tracker module.
  */
 
 /**
@@ -49,4 +49,44 @@ function leadtrackerAdminPrepareHead()
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'leadtracker@leadtracker', 'remove');
 
 	return $head;
+}
+
+/**
+ *  Check whether a project passes the configured category flag filter.
+ *
+ *  Filter modes:
+ *    'all'          — always pass (no filtering)
+ *    'has_category' — only pass if project has the configured category
+ *    'no_category'  — only pass if project does NOT have the configured category
+ *
+ *  Returns true if no category is configured, regardless of mode, so
+ *  the tracker degrades gracefully when the admin hasn't finished setup.
+ *
+ *  @param  int     $projectId
+ *  @param  DoliDB  $db
+ *  @return bool
+ */
+function leadtrackerProjectPassesFilter($projectId, $db)
+{
+	$mode  = getDolGlobalString('LEADTRACKER_FILTER_MODE', 'all');
+	if ($mode === 'all') {
+		return true;
+	}
+
+	$catId = (int) getDolGlobalString('LEADTRACKER_FLAG_CATEGORY_ID', '0');
+	if ($catId <= 0) {
+		return true;
+	}
+
+	$sql = "SELECT COUNT(*) as cnt FROM ".MAIN_DB_PREFIX."categorie_project"
+		." WHERE fk_project = ".(int) $projectId
+		." AND fk_categorie = ".$catId;
+	$res = $db->query($sql);
+	$hasCategory = false;
+	if ($res) {
+		$obj = $db->fetch_object($res);
+		$hasCategory = ($obj && (int) $obj->cnt > 0);
+	}
+
+	return ($mode === 'has_category') ? $hasCategory : !$hasCategory;
 }

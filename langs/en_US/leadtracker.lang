@@ -10,29 +10,57 @@ Module500121Desc = Visual pipeline tracker and automation engine for Dolibarr op
 LeadtrackerTitle = Lead pipeline
 LeadtrackerNotApplicable = Not applicable
 
-# Setup
+# Setup page
 LeadtrackerSetup = Lead Tracker setup
-LeadtrackerSetupPage = Configure the pipeline stages and automation conditions.
-LeadtrackerTabPipeline = Pipeline
-LeadtrackerTabDisplay = Display
-LeadtrackerPipelineTitle = Pipeline stages
-LeadtrackerPipelineHelp = Drag stages to reorder. Stage names are managed in Dolibarr's dictionary (Home > Setup > Dictionary > Lead status).
-LeadtrackerConditions = Auto-advance conditions
+LeadtrackerSetupPage = Configure auto-advance conditions, the opportunity filter, and display options.
+
+# Auto-advance conditions section
+LeadtrackerAutoSectionTitle = Auto-advance conditions
+LeadtrackerAutoSectionHelp = Check the conditions that should trigger automatic stage advancement. Any one matched condition advances the deal (OR logic). Stage order is managed in Home > Setup > Dictionary > Lead status.
+LeadtrackerNoStages = No active pipeline stages found.
+LeadtrackerGoToDictionary = Set up lead statuses →
+
+# Condition types — full labels (used in tooltips)
 LeadtrackerConditionHasContact = Has outbound contact (call, email, meeting)
 LeadtrackerConditionHasProposal = Has at least one proposal
 LeadtrackerConditionHasSignedProposal = Has a signed / accepted proposal
 LeadtrackerConditionHasOrder = Has a validated order
 LeadtrackerConditionHasInvoice = Has a validated invoice
 LeadtrackerConditionManualOnly = Manual only (never auto-advance)
+
+# Condition types — short column headers for the matrix table
+LeadtrackerConditionContactShort = Contact
+LeadtrackerConditionProposalShort = Proposal
+LeadtrackerConditionSignedShort = Signed
+LeadtrackerConditionOrderShort = Order
+LeadtrackerConditionInvoiceShort = Invoice
+LeadtrackerConditionManualShort = Manual
+
+# Opportunity filter section
+LeadtrackerFilterSectionTitle = Opportunity filter
+LeadtrackerFilterSectionHelp = Restrict the tracker to specific deals using a project category as a flag. Select "Track all projects" to disable filtering. If you haven't created a category yet, use the link below.
+LeadtrackerFilterMode = Filter mode
+LeadtrackerFilterAll = Track all projects
+LeadtrackerFilterHasCategory = Track only projects with the selected category
+LeadtrackerFilterNoCategory = Ignore projects with the selected category
+LeadtrackerFilterCategory = Flag category
+LeadtrackerFilterCategoryNone = (none)
+LeadtrackerFilterNoCategoriesYet = No project categories found.
+LeadtrackerGoToCategories = Create one →
+
+# Display section
+LeadtrackerDisplayOptions = Display
 LeadtrackerDisplayMode = Display mode
 LeadtrackerDisplayModeFull = Full (circles and labels)
 LeadtrackerDisplayModeCompact = Compact (circles only)
-LeadtrackerClickable = Completed stages link to their document
-LeadtrackerActionLinks = Action link on current stage
-LeadtrackerDebug = Debug output (admins only)
+LeadtrackerActionLinks = Show action link on current stage
+LeadtrackerDebug = Debug output
+LeadtrackerDebugHelp = Visible to administrators only.
+
+# Colors
 LeadtrackerColors = Colors (leave empty for theme default)
-LeadtrackerColorComplete = Completed color
-LeadtrackerColorCurrent = Current color
-LeadtrackerColorPending = Pending color
-LeadtrackerColorLost = Lost color
-LeadtrackerColorHelp = Accepts a hex code (e.g. #2e7d32), a CSS color name, or rgb()/rgba().
+LeadtrackerColorComplete = Completed stage color
+LeadtrackerColorCurrent = Current stage color
+LeadtrackerColorPending = Pending stage color
+LeadtrackerColorLost = Lost stage color
+LeadtrackerColorHelp = Accepts a hex code (#2e7d32), a CSS color name, or rgb()/rgba().

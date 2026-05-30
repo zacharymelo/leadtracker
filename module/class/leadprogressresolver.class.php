@@ -241,7 +241,10 @@ class LeadProgressResolver
 
 	/**
 	 *  Check for any outbound contact (call, email, meeting) linked to the project.
-	 *  Note: actioncomm uses fk_project, not fk_projet.
+	 *
+	 *  Checks both fk_project (direct FK) and fk_element/elementtype = 'project'
+	 *  (the generic link Dolibarr uses for auto-created email events when the
+	 *  "create event on send" agenda option is enabled from a project card).
 	 *
 	 *  @param  int  $projectId
 	 *  @return bool
@@ -249,11 +252,13 @@ class LeadProgressResolver
 	private function checkContact($projectId)
 	{
 		// Do not filter by action code — Dolibarr uses different codes depending
-		// on where the email/call is triggered (AC_EMAIL, AC_OTH, empty, etc.).
+		// on where the email/call is triggered (AC_EMAIL, AC_OTH_AUTO, etc.).
 		// Exclude only systemauto events (project created, validated, etc.) which
 		// have a gear icon and are never user-initiated contact.
+		$pid = (int) $projectId;
 		$sql = "SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX."actioncomm"
-			." WHERE fk_project = ".(int) $projectId
+			." WHERE (fk_project = ".$pid
+			."  OR (fk_element = ".$pid." AND elementtype = 'project'))"
 			." AND type != 'systemauto'"
 			." AND entity IN (".getEntity('actioncomm').")";
 		$res = $this->db->query($sql);

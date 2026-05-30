@@ -122,8 +122,35 @@ if ($resC) {
 	}
 }
 
-// Optional: resolve steps for a specific project
+// Optional: raw actioncomm rows for a project (shows fk_project vs fk_element linkage)
 $projectId = GETPOSTINT('project_id');
+if ($projectId > 0) {
+	$pid = (int) $projectId;
+	$sqlAC = "SELECT rowid, ref, type, code, fk_project, fk_element, elementtype, label"
+		." FROM ".MAIN_DB_PREFIX."actioncomm"
+		." WHERE (fk_project = ".$pid
+		."  OR (fk_element = ".$pid." AND elementtype = 'project'))"
+		." AND entity IN (".getEntity('actioncomm').")"
+		." ORDER BY rowid DESC LIMIT 30";
+	$resAC = $db->query($sqlAC);
+	$out['actioncomms'] = array();
+	if ($resAC) {
+		while ($row = $db->fetch_object($resAC)) {
+			$out['actioncomms'][] = array(
+				'rowid'       => (int) $row->rowid,
+				'ref'         => $row->ref,
+				'type'        => $row->type,
+				'code'        => $row->code,
+				'fk_project'  => $row->fk_project,
+				'fk_element'  => $row->fk_element,
+				'elementtype' => $row->elementtype,
+				'label'       => $row->label,
+			);
+		}
+	}
+}
+
+// Resolve steps for a specific project
 if ($projectId > 0) {
 	$sqlP = "SELECT rowid, fk_opp_status FROM ".MAIN_DB_PREFIX."projet"
 		." WHERE rowid = ".(int) $projectId

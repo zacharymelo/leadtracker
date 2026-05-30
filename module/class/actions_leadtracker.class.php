@@ -317,7 +317,7 @@ class ActionsLeadtracker
 		$title    = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOnHelp' : 'LeadtrackerAutoSyncOffHelp');
 		$ajaxUrl  = dol_buildpath('/leadtracker/ajax/toggle_sync.php', 1);
 		$backurl  = htmlspecialchars(urlencode($_SERVER['REQUEST_URI'] ?? ''), ENT_QUOTES, 'UTF-8');
-		$btnClass = 'leadtracker-sync-btn '.($autoSync ? 'leadtracker-sync-on' : 'leadtracker-sync-off');
+		$btnClass = 'butAction leadtracker-sync-btn '.($autoSync ? 'leadtracker-sync-on' : 'leadtracker-sync-off');
 
 		// .divButAction aligns the button vertically with Dolibarr's native action buttons.
 		$out  = '<div class="leadtracker-sync-row inline-block divButAction">';

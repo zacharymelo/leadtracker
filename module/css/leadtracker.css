@@ -230,33 +230,27 @@
 	margin: 0 12px 0 0;
 }
 
-/* Base button — mirrors Dolibarr's butAction shape (padding, radius, font) */
+/* Base button — inherits shape from butAction; this class adds the color overrides */
 .leadtracker-sync-btn {
-	display: inline-block;
-	padding: 6px 14px;
-	border: none;
-	border-radius: 3px;
-	font-size: 0.8em;
-	font-weight: bold;
-	text-transform: uppercase;
-	letter-spacing: 0.4px;
-	line-height: 1.5;
-	cursor: pointer;
 	white-space: nowrap;
-	color: #fff;
-	transition: filter 0.15s;
-}
-.leadtracker-sync-btn:hover {
-	filter: brightness(0.88);
-	color: #fff;
 }
 
-/* ON = red (signals active automation — clicking turns it off) */
-.leadtracker-sync-on {
+/* ON = red — double-class selector beats .butAction's background (0,2,0 > 0,1,0) */
+.leadtracker-sync-btn.leadtracker-sync-on {
 	background-color: #c62828;
+	color: #fff;
+}
+.leadtracker-sync-btn.leadtracker-sync-on:hover {
+	background-color: #b71c1c;
+	color: #fff;
 }
 
-/* OFF = gray (signals manual mode — clicking turns auto back on) */
-.leadtracker-sync-off {
+/* OFF = gray */
+.leadtracker-sync-btn.leadtracker-sync-off {
 	background-color: #9e9e9e;
+	color: #fff;
+}
+.leadtracker-sync-btn.leadtracker-sync-off:hover {
+	background-color: #757575;
+	color: #fff;
 }

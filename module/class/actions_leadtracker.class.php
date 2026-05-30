@@ -164,8 +164,8 @@ class ActionsLeadtracker
 		$out .= '<div id="leadtracker-holder" style="display:none;">';
 		$out .= '<div class="leadtracker-wrap">';
 		$out .= $renderer->render($steps, $user);
-		$out .= $this->syncToggle((int) $object->id, $autoSync);
 		$out .= '</div>';
+		$out .= $this->syncToggle((int) $object->id, $autoSync);
 		$out .= '</div>'."\n";
 
 		if ($this->getConf('LEADTRACKER_DEBUG', '0') == '1' && !empty($user->admin)) {
@@ -229,15 +229,23 @@ class ActionsLeadtracker
 	{
 		return "<script>\n"
 			."jQuery(function(){\n"
-			." var holder = jQuery('#leadtracker-holder');\n"
-			." if (!holder.length) { return; }\n"
-			." var wrap = holder.children('.leadtracker-wrap');\n"
-			." if (!wrap.length) { holder.remove(); return; }\n"
-			." var anchor = jQuery('div.arearef').first();\n"
-			." if (anchor.length) { anchor.before(wrap); }\n"
-			." else { var c = jQuery('div.fichecenter').first();\n"
-			."   if (c.length) { c.prepend(wrap); }\n"
-			."   else { jQuery('div.tabBar').first().prepend(wrap); } }\n"
+			." var holder=jQuery('#leadtracker-holder');\n"
+			." if(!holder.length){return;}\n"
+			// Move tracker bar to just above the card detail area.
+			." var wrap=holder.children('.leadtracker-wrap');\n"
+			." if(wrap.length){\n"
+			."  var anchor=jQuery('div.arearef').first();\n"
+			."  if(anchor.length){anchor.before(wrap);}\n"
+			."  else{var c=jQuery('div.fichecenter').first();\n"
+			."   if(c.length){c.prepend(wrap);}\n"
+			."   else{jQuery('div.tabBar').first().prepend(wrap);}}\n"
+			." }\n"
+			// Move sync toggle into the tabsAction button row.
+			." var toggle=holder.children('.leadtracker-sync-row');\n"
+			." if(toggle.length){\n"
+			."  var ta=jQuery('div.tabsAction').first();\n"
+			."  if(ta.length){ta.append(toggle);}\n"
+			." }\n"
 			." holder.remove();\n"
 			."});\n"
 			."</script>\n";
@@ -290,7 +298,8 @@ class ActionsLeadtracker
 	}
 
 	/**
-	 *  Render the auto-sync toggle button placed below the tracker bar.
+	 *  Render the auto-sync toggle. Relocated by JS into div.tabsAction so it sits
+	 *  alongside the card's native action buttons (Send email, Back to draft, etc.).
 	 *
 	 *  @param  int   $projectId
 	 *  @param  bool  $autoSync  Current state
@@ -308,7 +317,8 @@ class ActionsLeadtracker
 		$ajaxUrl = dol_buildpath('/leadtracker/ajax/toggle_sync.php', 1);
 		$backurl = htmlspecialchars(urlencode($_SERVER['REQUEST_URI'] ?? ''), ENT_QUOTES, 'UTF-8');
 
-		$out  = '<div class="leadtracker-sync-row">';
+		// .inline-block.divButAction makes it vertically align with Dolibarr's action buttons.
+		$out  = '<div class="leadtracker-sync-row inline-block divButAction">';
 		$out .= '<form id="leadtracker-sync-form" method="post"';
 		$out .= ' action="'.dol_escape_htmltag($ajaxUrl).'" style="margin:0;padding:0;">';
 		$out .= '<input type="hidden" name="token" value="'.dol_escape_htmltag(newToken()).'">';

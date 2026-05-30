@@ -222,13 +222,11 @@
 	display: block;
 }
 
-/* --- Auto-sync toggle row --- */
+/* --- Auto-sync toggle — sits in div.tabsAction alongside native action buttons --- */
 
 .leadtracker-sync-row {
-	display: flex;
-	align-items: center;
-	margin: 4px 2px 2px 2px;
-	font-size: 11px;
+	vertical-align: middle;
+	margin: 0;
 }
 
 .leadtracker-sync-label {
@@ -237,12 +235,15 @@
 	gap: 6px;
 	cursor: pointer;
 	user-select: none;
-	color: var(--colortexttitlenotab, #888);
+	color: var(--colortexttitlenotab, #777);
+	font-size: 12px;
+	padding: 4px 0;
 }
 
 .leadtracker-sync-text {
-	font-size: 11px;
-	opacity: 0.85;
+	font-size: 12px;
+	opacity: 0.9;
+	white-space: nowrap;
 }
 
 /* Toggle switch */

@@ -133,6 +133,10 @@ if ($action == 'update') {
 	if (dolibarr_set_const($db, 'LEADTRACKER_AMOUNT_MODE', $amountMode, 'chaine', 0, '', $conf->entity) < 0) {
 		$error++;
 	}
+	$extraField = preg_replace('/[^a-zA-Z0-9_]/', '', trim(GETPOST('LEADTRACKER_AMOUNT_EXTRAFIELD', 'alpha')));
+	if (dolibarr_set_const($db, 'LEADTRACKER_AMOUNT_EXTRAFIELD', $extraField, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
 	$percentMode = GETPOST('LEADTRACKER_PERCENT_MODE', 'alpha');
 	if (!in_array($percentMode, array('manual', 'stage_default'))) {
 		$percentMode = 'manual';
@@ -309,6 +313,11 @@ print $form->selectarray('LEADTRACKER_AMOUNT_MODE', array(
 ), getDolGlobalString('LEADTRACKER_AMOUNT_MODE', 'manual'), 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
 print '</td></tr>';
 print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAmountModeHelp").'</span></td></tr>';
+
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerAmountExtrafield").'</td><td>';
+print '<input type="text" name="LEADTRACKER_AMOUNT_EXTRAFIELD" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_AMOUNT_EXTRAFIELD')).'" placeholder="total" size="20">';
+print ' <span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAmountExtrafieldHelp").'</span>';
+print '</td></tr>';
 
 // Percent mode
 print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerPercentMode").'</td><td>';

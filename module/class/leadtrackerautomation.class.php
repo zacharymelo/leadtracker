@@ -226,7 +226,45 @@ class LeadtrackerAutomation
 		}
 
 		// 4. Average of open proposals: draft (0) or validated/sent (1).
-		return $this->avgLinkedDocTotals('propal', $projectId, 'fk_statut IN (0, 1)');
+		$openAvg = $this->avgLinkedDocTotals('propal', $projectId, 'fk_statut IN (0, 1)');
+		if ($openAvg > 0) {
+			return $openAvg;
+		}
+
+		// 5. Extrafield fallback — initial estimate captured at lead intake
+		//    (e.g. from an email collector). Only used when no documents exist yet.
+		$field = trim(getDolGlobalString('LEADTRACKER_AMOUNT_EXTRAFIELD', ''));
+		if ($field !== '') {
+			$estimate = $this->getProjectExtrafield($projectId, $field);
+			if ($estimate > 0) {
+				return $estimate;
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 *  Read a single numeric extrafield value from llx_projet_extrafields.
+	 *
+	 *  @param  int     $projectId
+	 *  @param  string  $fieldName  Attribute code (alphanumeric + underscore only)
+	 *  @return float
+	 */
+	private function getProjectExtrafield($projectId, $fieldName)
+	{
+		// Sanitise to prevent injection — only allow safe column name characters.
+		$fieldName = preg_replace('/[^a-zA-Z0-9_]/', '', $fieldName);
+		if ($fieldName === '') {
+			return 0;
+		}
+		$sql = "SELECT ".$fieldName." as val FROM ".MAIN_DB_PREFIX."projet_extrafields"
+			." WHERE fk_object = ".(int) $projectId;
+		$res = $this->db->query($sql);
+		if ($res && $obj = $this->db->fetch_object($res)) {
+			return (float) $obj->val;
+		}
+		return 0;
 	}
 
 	/**

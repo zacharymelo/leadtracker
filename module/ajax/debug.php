@@ -200,15 +200,20 @@ if ($projectId > 0) {
 		}
 	}
 
-	// Raw dump: key columns of a specific actioncomm (pass &actioncomm_id=N to inspect)
+	// Raw dump: ALL columns of a specific actioncomm (pass &actioncomm_id=N to inspect).
+	// SELECT * so a missing/renamed column can never make this fail silently —
+	// this reveals the true table schema for this installation.
 	$actioncommId = GETPOSTINT('actioncomm_id');
 	if ($actioncommId > 0) {
-		$sqlRaw = "SELECT rowid, ref, type, code, fk_soc, fk_project,"
-			." fk_element, elementtype, label"
-			." FROM ".MAIN_DB_PREFIX."actioncomm"
+		$sqlRaw = "SELECT * FROM ".MAIN_DB_PREFIX."actioncomm"
 			." WHERE rowid = ".(int) $actioncommId;
 		$resRaw = $db->query($sqlRaw);
-		$out['actioncomm_raw'] = $resRaw ? $db->fetch_object($resRaw) : null;
+		if ($resRaw) {
+			$out['actioncomm_raw'] = $db->fetch_object($resRaw);
+		} else {
+			$out['actioncomm_raw'] = null;
+			$out['actioncomm_raw_error'] = $db->lasterror();
+		}
 
 		// Also show all its resources rows
 		$sqlRes2 = "SELECT rowid, fk_actioncomm, element_type, fk_element"
@@ -229,6 +234,29 @@ if ($projectId > 0) {
 	$sqlSoc = "SELECT fk_soc FROM ".MAIN_DB_PREFIX."projet WHERE rowid = ".(int) $projectId;
 	$resSoc = $db->query($sqlSoc);
 	$out['project_fk_soc'] = ($resSoc && ($rowSoc = $db->fetch_object($resSoc))) ? $rowSoc->fk_soc : null;
+}
+
+// Full-row sweep of every actioncomm sharing the project's company.
+// SELECT * cannot fail on a missing column, so this both reveals the real
+// actioncomm schema for this install AND shows exactly how the email event is
+// stored (its code, fk_soc, fk_project, elementtype, and whatever column — if
+// any — actually distinguishes user activity from gear-icon system events).
+if ($projectId > 0 && !empty($out['project_fk_soc'])) {
+	$socId = (int) $out['project_fk_soc'];
+	$sqlSweep = "SELECT * FROM ".MAIN_DB_PREFIX."actioncomm"
+		." WHERE fk_soc = ".$socId
+		." AND entity IN (".getEntity('actioncomm').")"
+		." ORDER BY rowid DESC LIMIT 50";
+	$resSweep = $db->query($sqlSweep);
+	if ($resSweep) {
+		$out['actioncomms_by_company'] = array();
+		while ($row = $db->fetch_object($resSweep)) {
+			$out['actioncomms_by_company'][] = $row;
+		}
+	} else {
+		$out['actioncomms_by_company'] = null;
+		$out['actioncomms_by_company_error'] = $db->lasterror();
+	}
 }
 
 // Resolve steps for a specific project

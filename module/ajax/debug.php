@@ -174,6 +174,54 @@ if ($projectId > 0) {
 			);
 		}
 	}
+
+	// Method 4: llx_element_element bidirectional link
+	$sqlEE = "SELECT a.rowid, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
+		." FROM ".MAIN_DB_PREFIX."actioncomm a"
+		." INNER JOIN ".MAIN_DB_PREFIX."element_element ee ON ("
+		."  (ee.fk_source = a.rowid AND ee.sourcetype = 'actioncomm' AND ee.fk_target = ".$pid." AND ee.targettype = 'project')"
+		."  OR (ee.fk_target = a.rowid AND ee.targettype = 'actioncomm' AND ee.fk_source = ".$pid." AND ee.sourcetype = 'project')"
+		." )"
+		." AND a.entity IN (".getEntity('actioncomm').")"
+		." ORDER BY a.rowid DESC LIMIT 30";
+	$resEE = $db->query($sqlEE);
+	$out['actioncomms_element_element'] = array();
+	if ($resEE) {
+		while ($row = $db->fetch_object($resEE)) {
+			$out['actioncomms_element_element'][] = array(
+				'rowid'       => (int) $row->rowid,
+				'type'        => $row->type,
+				'code'        => $row->code,
+				'fk_project'  => $row->fk_project,
+				'fk_element'  => $row->fk_element,
+				'elementtype' => $row->elementtype,
+				'label'       => $row->label,
+			);
+		}
+	}
+
+	// Raw dump: key columns of a specific actioncomm (pass &actioncomm_id=N to inspect)
+	$actioncommId = GETPOSTINT('actioncomm_id');
+	if ($actioncommId > 0) {
+		$sqlRaw = "SELECT rowid, ref, type, code, fk_soc, fk_contact, fk_project,"
+			." fk_element, elementtype, label, note"
+			." FROM ".MAIN_DB_PREFIX."actioncomm"
+			." WHERE rowid = ".(int) $actioncommId;
+		$resRaw = $db->query($sqlRaw);
+		$out['actioncomm_raw'] = $resRaw ? $db->fetch_object($resRaw) : null;
+
+		// Also show all its resources rows
+		$sqlRes2 = "SELECT rowid, fk_actioncomm, element_type, fk_element"
+			." FROM ".MAIN_DB_PREFIX."actioncomm_resources"
+			." WHERE fk_actioncomm = ".(int) $actioncommId;
+		$resRes2 = $db->query($sqlRes2);
+		$out['actioncomm_resources_raw'] = array();
+		if ($resRes2) {
+			while ($row = $db->fetch_object($resRes2)) {
+				$out['actioncomm_resources_raw'][] = $row;
+			}
+		}
+	}
 }
 
 // Resolve steps for a specific project

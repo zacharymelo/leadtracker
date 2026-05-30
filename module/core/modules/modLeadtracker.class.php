@@ -58,7 +58,7 @@ class modLeadtracker extends DolibarrModules
 		$this->editor_name = 'Lead Tracker contributors';
 		$this->editor_url = '';
 
-		$this->version = '1.1.9';
+		$this->version = '1.1.10';
 
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 

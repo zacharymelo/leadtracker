@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.1.9';
+	public $version     = '1.1.10';
 	public $picto       = 'projectpub';
 
 	/**
@@ -69,6 +69,19 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 			require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
 			$automation = new LeadtrackerAutomation($this->db);
 			$automation->recalculateValues((int) $object->id);
+			return 0;
+		}
+
+		// Project card "Send email" — the object IS the project, contact is a known fact.
+		// Dolibarr fires PROJECT_SENTBYMAIL here; ACTION_CREATE only fires if the global
+		// "create event on send" agenda option is enabled, making it unreliable on its own.
+		if ($action === 'PROJECT_SENTBYMAIL') {
+			if (empty($object->id)) {
+				return 0;
+			}
+			require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
+			$automation = new LeadtrackerAutomation($this->db);
+			$automation->maybeAdvance((int) $object->id, array('has_outbound_contact' => true));
 			return 0;
 		}
 
@@ -136,6 +149,13 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 		// actioncomm uses fk_project (not fk_projet)
 		if (!empty($object->fk_project)) {
 			$ids[] = (int) $object->fk_project;
+		}
+
+		// Some Dolibarr versions link actioncomm to a project via the generic
+		// fk_element / elementtype pair instead of (or in addition to) fk_project.
+		if (!empty($object->fk_element) && !empty($object->elementtype)
+			&& $object->elementtype === 'project') {
+			$ids[] = (int) $object->fk_element;
 		}
 
 		// Also look in element_element for links added after object creation

@@ -204,7 +204,7 @@ if ($projectId > 0) {
 	$actioncommId = GETPOSTINT('actioncomm_id');
 	if ($actioncommId > 0) {
 		$sqlRaw = "SELECT rowid, ref, type, code, fk_soc, fk_contact, fk_project,"
-			." fk_element, elementtype, label, note"
+			." fk_element, elementtype, label"
 			." FROM ".MAIN_DB_PREFIX."actioncomm"
 			." WHERE rowid = ".(int) $actioncommId;
 		$resRaw = $db->query($sqlRaw);
@@ -222,6 +222,13 @@ if ($projectId > 0) {
 			}
 		}
 	}
+}
+
+// Project fk_soc (to compare with actioncomm fk_soc)
+if ($projectId > 0) {
+	$sqlSoc = "SELECT fk_soc FROM ".MAIN_DB_PREFIX."projet WHERE rowid = ".(int) $projectId;
+	$resSoc = $db->query($sqlSoc);
+	$out['project_fk_soc'] = ($resSoc && ($rowSoc = $db->fetch_object($resSoc))) ? $rowSoc->fk_soc : null;
 }
 
 // Resolve steps for a specific project

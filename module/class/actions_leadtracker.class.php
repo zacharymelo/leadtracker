@@ -281,6 +281,33 @@ class ActionsLeadtracker
 		foreach ($steps as $s) {
 			$out .= dol_escape_htmltag($s['key'].' =&gt; '.$s['state']).'<br>';
 		}
+
+		// Amount / extrafield diagnostics.
+		$amountMode  = getDolGlobalString('LEADTRACKER_AMOUNT_MODE', 'manual');
+		$efCode      = trim(getDolGlobalString('LEADTRACKER_AMOUNT_EXTRAFIELD', ''));
+		$percentMode = getDolGlobalString('LEADTRACKER_PERCENT_MODE', 'manual');
+		$out .= '<em>amount_mode:</em> '.dol_escape_htmltag($amountMode);
+		$out .= ' &nbsp;|&nbsp; <em>percent_mode:</em> '.dol_escape_htmltag($percentMode);
+
+		if ($efCode !== '') {
+			$efClean = preg_replace('/[^a-zA-Z0-9_]/', '', $efCode);
+			$rawVal  = '(no row)';
+			if ($efClean !== '' && !empty($object->id)) {
+				$sqlEf = "SELECT ".$efClean." as val FROM ".MAIN_DB_PREFIX."projet_extrafields"
+					." WHERE fk_object = ".(int) $object->id;
+				$resEf = $this->db->query($sqlEf);
+				if ($resEf && ($rowEf = $this->db->fetch_object($resEf))) {
+					$rawVal = ($rowEf->val !== null) ? dol_escape_htmltag((string) $rowEf->val) : '(null)';
+				} elseif (!$resEf) {
+					$rawVal = '(query error — column missing?)';
+				}
+			}
+			$out .= ' &nbsp;|&nbsp; <em>extrafield</em> <b>'.dol_escape_htmltag($efCode).'</b> = '.$rawVal;
+		} else {
+			$out .= ' &nbsp;|&nbsp; <em>extrafield:</em> <b>(not configured)</b>';
+		}
+		$out .= '<br>';
+
 		$out .= '</div>';
 		return $out;
 	}

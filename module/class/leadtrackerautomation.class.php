@@ -267,8 +267,11 @@ class LeadtrackerAutomation
 		$sql = "SELECT ".$fieldName." as val FROM ".MAIN_DB_PREFIX."projet_extrafields"
 			." WHERE fk_object = ".(int) $projectId;
 		$res = $this->db->query($sql);
-		if ($res && $obj = $this->db->fetch_object($res)) {
-			return (float) $obj->val;
+		if ($res && ($obj = $this->db->fetch_object($res)) && $obj->val !== null && $obj->val !== '') {
+			// Strip currency symbols and thousand-separators (e.g. "$15,698 CAD" → "15698")
+			// then use price2num() for locale-aware decimal handling before casting to float.
+			$clean = preg_replace('/[^\d.,]/', '', (string) $obj->val);
+			return (float) price2num($clean);
 		}
 		return 0;
 	}

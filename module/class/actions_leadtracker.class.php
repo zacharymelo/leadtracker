@@ -244,7 +244,7 @@ class ActionsLeadtracker
 			." var toggle=holder.children('.leadtracker-sync-row');\n"
 			." if(toggle.length){\n"
 			."  var ta=jQuery('div.tabsAction').first();\n"
-			."  if(ta.length){ta.append(toggle);}\n"
+			."  if(ta.length){ta.prepend(toggle);}\n"
 			." }\n"
 			." holder.remove();\n"
 			."});\n"
@@ -299,7 +299,8 @@ class ActionsLeadtracker
 
 	/**
 	 *  Render the auto-sync toggle. Relocated by JS into div.tabsAction so it sits
-	 *  alongside the card's native action buttons (Send email, Back to draft, etc.).
+	 *  at the start of the card's native action button row (Send email, Modify, etc.).
+	 *  Red = auto-sync on; gray = manual override.
 	 *
 	 *  @param  int   $projectId
 	 *  @param  bool  $autoSync  Current state
@@ -311,29 +312,25 @@ class ActionsLeadtracker
 
 		$langs->loadLangs(array('leadtracker@leadtracker'));
 
-		$newVal  = $autoSync ? 0 : 1;
-		$label   = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOn' : 'LeadtrackerAutoSyncOff');
-		$title   = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOnHelp' : 'LeadtrackerAutoSyncOffHelp');
-		$ajaxUrl = dol_buildpath('/leadtracker/ajax/toggle_sync.php', 1);
-		$backurl = htmlspecialchars(urlencode($_SERVER['REQUEST_URI'] ?? ''), ENT_QUOTES, 'UTF-8');
+		$newVal   = $autoSync ? 0 : 1;
+		$label    = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOn' : 'LeadtrackerAutoSyncOff');
+		$title    = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOnHelp' : 'LeadtrackerAutoSyncOffHelp');
+		$ajaxUrl  = dol_buildpath('/leadtracker/ajax/toggle_sync.php', 1);
+		$backurl  = htmlspecialchars(urlencode($_SERVER['REQUEST_URI'] ?? ''), ENT_QUOTES, 'UTF-8');
+		$btnClass = 'leadtracker-sync-btn '.($autoSync ? 'leadtracker-sync-on' : 'leadtracker-sync-off');
 
-		// .inline-block.divButAction makes it vertically align with Dolibarr's action buttons.
+		// .divButAction aligns the button vertically with Dolibarr's native action buttons.
 		$out  = '<div class="leadtracker-sync-row inline-block divButAction">';
-		$out .= '<form id="leadtracker-sync-form" method="post"';
-		$out .= ' action="'.dol_escape_htmltag($ajaxUrl).'" style="margin:0;padding:0;">';
+		$out .= '<form method="post" action="'.dol_escape_htmltag($ajaxUrl).'" style="margin:0;padding:0;">';
 		$out .= '<input type="hidden" name="token" value="'.dol_escape_htmltag(newToken()).'">';
 		$out .= '<input type="hidden" name="project_id" value="'.(int) $projectId.'">';
 		$out .= '<input type="hidden" name="auto_sync" value="'.(int) $newVal.'">';
 		$out .= '<input type="hidden" name="backurl" value="'.$backurl.'">';
-		$out .= '<label class="leadtracker-sync-label" title="'.dol_escape_htmltag($title).'">';
-		$out .= '<span class="leadtracker-sync-text">'.dol_escape_htmltag($label).'</span>';
-		$out .= '<span class="leadtracker-sync-switch">';
-		$out .= '<input type="checkbox" class="leadtracker-sync-check"'.($autoSync ? ' checked' : '').'>';
-		$out .= '<span class="leadtracker-sync-slider"></span>';
-		$out .= '</span>';
-		$out .= '</label>';
+		$out .= '<button type="submit" class="'.dol_escape_htmltag($btnClass).'"';
+		$out .= ' title="'.dol_escape_htmltag($title).'">';
+		$out .= dol_escape_htmltag($label);
+		$out .= '</button>';
 		$out .= '</form>';
-		$out .= '<script>document.querySelector(\'.leadtracker-sync-check\').addEventListener(\'change\',function(){document.getElementById(\'leadtracker-sync-form\').submit();});</script>';
 		$out .= '</div>';
 
 		return $out;

@@ -222,68 +222,41 @@
 	display: block;
 }
 
-/* --- Auto-sync toggle — sits in div.tabsAction alongside native action buttons --- */
+/* --- Auto-sync button — sits at the START of div.tabsAction --- */
 
+/* Wrapper: slight right margin creates a visual gap between this button and the native ones */
 .leadtracker-sync-row {
 	vertical-align: middle;
-	margin: 0;
+	margin: 0 12px 0 0;
 }
 
-.leadtracker-sync-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	cursor: pointer;
-	user-select: none;
-	color: var(--colortexttitlenotab, #777);
-	font-size: 12px;
-	padding: 4px 0;
-}
-
-.leadtracker-sync-text {
-	font-size: 12px;
-	opacity: 0.9;
-	white-space: nowrap;
-}
-
-/* Toggle switch */
-.leadtracker-sync-switch {
-	position: relative;
+/* Base button — mirrors Dolibarr's butAction shape (padding, radius, font) */
+.leadtracker-sync-btn {
 	display: inline-block;
-	width: 30px;
-	height: 16px;
-	flex-shrink: 0;
-}
-
-.leadtracker-sync-check {
-	opacity: 0;
-	width: 0;
-	height: 0;
-	position: absolute;
-}
-
-.leadtracker-sync-slider {
-	position: absolute;
-	inset: 0;
-	background: #ccc;
-	border-radius: 16px;
+	padding: 6px 14px;
+	border: none;
+	border-radius: 3px;
+	font-size: 0.8em;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	line-height: 1.5;
 	cursor: pointer;
-	transition: background 0.2s;
+	white-space: nowrap;
+	color: #fff;
+	transition: filter 0.15s;
 }
-.leadtracker-sync-slider::before {
-	content: '';
-	position: absolute;
-	width: 10px;
-	height: 10px;
-	left: 3px;
-	top: 3px;
-	background: #fff;
-	border-radius: 50%;
-	transition: transform 0.2s;
+.leadtracker-sync-btn:hover {
+	filter: brightness(0.88);
+	color: #fff;
 }
-.leadtracker-sync-check:checked ~ .leadtracker-sync-slider {
-	background: var(--leadtracker-complete, #2e7d32);
+
+/* ON = red (signals active automation — clicking turns it off) */
+.leadtracker-sync-on {
+	background-color: #c62828;
 }
-.leadtracker-sync-check:checked ~ .leadtracker-sync-slider::before {
-	transform: translateX(14px);
+
+/* OFF = gray (signals manual mode — clicking turns auto back on) */
+.leadtracker-sync-off {
+	background-color: #9e9e9e;
 }

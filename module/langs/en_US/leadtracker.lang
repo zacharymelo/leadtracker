@@ -80,7 +80,7 @@ LeadtrackerColorLost = Lost stage color
 LeadtrackerColorHelp = Accepts a hex code (#2e7d32), a CSS color name, or rgb()/rgba().
 
 # Auto-sync toggle
-LeadtrackerAutoSyncOn = Auto-sync on
-LeadtrackerAutoSyncOff = Manual override
-LeadtrackerAutoSyncOnHelp = Amount and probability recalculate automatically on every document event. Click to lock for manual editing.
-LeadtrackerAutoSyncOffHelp = Values are locked for manual editing. Click to re-enable automatic recalculation.
+LeadtrackerAutoSyncOn = Auto-Sync On
+LeadtrackerAutoSyncOff = Auto-Sync Off
+LeadtrackerAutoSyncOnHelp = Lead amount and probability are recalculating automatically. Click to disable and manage values manually.
+LeadtrackerAutoSyncOffHelp = Values are locked for manual editing. Click to re-enable automatic recalculation from linked documents.

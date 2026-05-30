@@ -315,7 +315,7 @@ print '</td></tr>';
 print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAmountModeHelp").'</span></td></tr>';
 
 print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerAmountExtrafield").'</td><td>';
-print '<input type="text" name="LEADTRACKER_AMOUNT_EXTRAFIELD" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_AMOUNT_EXTRAFIELD')).'" placeholder="total" size="20">';
+print '<input type="text" name="LEADTRACKER_AMOUNT_EXTRAFIELD" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_AMOUNT_EXTRAFIELD')).'" placeholder="e.g. total" size="20">';
 print ' <span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAmountExtrafieldHelp").'</span>';
 print '</td></tr>';
 

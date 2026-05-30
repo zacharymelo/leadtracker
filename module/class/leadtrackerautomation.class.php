@@ -546,18 +546,25 @@ class LeadtrackerAutomation
 		// Exclude only systemauto events (project created, validated, etc.) which
 		// have a gear icon and are never user-initiated contact.
 		$pid = (int) $projectId;
-		// Three ways Dolibarr can link an actioncomm to a project:
+
+		// Four ways Dolibarr can link an actioncomm to a project:
 		//   1. fk_project direct FK
 		//   2. fk_element / elementtype = 'project' (generic element link)
 		//   3. actioncomm_resources row with element_type = 'project'
-		//      (used by auto-created email events from project card in v22+)
+		//   4. Fallback: actioncomm.fk_soc matches the project's fk_soc — Dolibarr's
+		//      "send email from project card" auto-event is stored against the company,
+		//      not the project directly, and the project agenda page shows it via
+		//      the shared fk_soc. This makes it detectable as contact evidence.
 		$sql = "SELECT COUNT(a.rowid) as cnt"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
 			." LEFT JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar"
 			."  ON ar.fk_actioncomm = a.rowid AND ar.element_type = 'project' AND ar.fk_element = ".$pid
+			." LEFT JOIN ".MAIN_DB_PREFIX."projet p"
+			."  ON p.rowid = ".$pid." AND p.fk_soc IS NOT NULL AND p.fk_soc > 0 AND a.fk_soc = p.fk_soc"
 			." WHERE (a.fk_project = ".$pid
 			."  OR (a.fk_element = ".$pid." AND a.elementtype = 'project')"
-			."  OR ar.rowid IS NOT NULL)"
+			."  OR ar.rowid IS NOT NULL"
+			."  OR p.rowid IS NOT NULL)"
 			." AND a.type != 'systemauto'"
 			." AND a.entity IN (".getEntity('actioncomm').")";
 		$res = $this->db->query($sql);

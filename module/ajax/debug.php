@@ -203,7 +203,7 @@ if ($projectId > 0) {
 	// Raw dump: key columns of a specific actioncomm (pass &actioncomm_id=N to inspect)
 	$actioncommId = GETPOSTINT('actioncomm_id');
 	if ($actioncommId > 0) {
-		$sqlRaw = "SELECT rowid, ref, type, code, fk_soc, fk_contact, fk_project,"
+		$sqlRaw = "SELECT rowid, ref, type, code, fk_soc, fk_project,"
 			." fk_element, elementtype, label"
 			." FROM ".MAIN_DB_PREFIX."actioncomm"
 			." WHERE rowid = ".(int) $actioncommId;

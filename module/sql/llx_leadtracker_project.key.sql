@@ -1,0 +1,2 @@
+-- Additional indexes for llx_leadtracker_project
+-- Unique index is already declared in the CREATE TABLE; nothing extra needed.

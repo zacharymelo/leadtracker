@@ -78,3 +78,9 @@ LeadtrackerColorCurrent = Couleur de l'étape courante
 LeadtrackerColorPending = Couleur des étapes en attente
 LeadtrackerColorLost = Couleur de l'étape perdue
 LeadtrackerColorHelp = Accepte un code hex (#2e7d32), un nom de couleur CSS, ou rgb()/rgba().
+
+# Bascule synchronisation automatique
+LeadtrackerAutoSyncOn = Synchro auto activée
+LeadtrackerAutoSyncOff = Modification manuelle
+LeadtrackerAutoSyncOnHelp = Le montant et la probabilité sont recalculés automatiquement à chaque événement document. Cliquez pour verrouiller et modifier manuellement.
+LeadtrackerAutoSyncOffHelp = Les valeurs sont verrouillées pour modification manuelle. Cliquez pour réactiver le calcul automatique.

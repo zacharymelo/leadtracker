@@ -159,6 +159,11 @@ class LeadtrackerAutomation
 	 */
 	private function updateProjectValues($projectId, $statusId)
 	{
+		// Respect per-project auto-sync override — when OFF the user owns these values.
+		if (!$this->isAutoSyncEnabled($projectId)) {
+			return true;
+		}
+
 		$updates = array();
 
 		// Amount.
@@ -198,6 +203,7 @@ class LeadtrackerAutomation
 	 *    2. Sum of validated orders         — committed spend
 	 *    3. Sum of accepted proposals       — confirmed intent (fk_statut = 2 only)
 	 *    4. Average of open proposals       — estimated pipeline value
+	 *    5. Numeric project extrafield   — intake estimate (configurable)
 	 *
 	 *  New documents at any level cause the relevant tier to recalculate.
 	 *  As invoices accumulate over time they sum for LTV tracking.
@@ -384,6 +390,59 @@ class LeadtrackerAutomation
 			return (float) $obj->percent;
 		}
 		return null;
+	}
+
+	/**
+	 *  Check whether automatic value sync is enabled for this project.
+	 *  Returns true (enabled) if no override row exists — auto-sync is ON by default.
+	 *
+	 *  @param  int  $projectId
+	 *  @return bool
+	 */
+	private function isAutoSyncEnabled($projectId)
+	{
+		$sql = "SELECT auto_sync FROM ".MAIN_DB_PREFIX."leadtracker_project"
+			." WHERE fk_project = ".(int) $projectId;
+		$res = $this->db->query($sql);
+		if ($res && ($obj = $this->db->fetch_object($res))) {
+			return (bool) $obj->auto_sync;
+		}
+		return true; // no override row → auto-sync on
+	}
+
+	/**
+	 *  Recalculate project values (amount + percent) without attempting stage
+	 *  advancement. Called when the project record itself is saved.
+	 *
+	 *  @param  int  $projectId
+	 *  @return bool
+	 */
+	public function recalculateValues($projectId)
+	{
+		$projectId = (int) $projectId;
+
+		// Apply category flag filter.
+		if (!function_exists('leadtrackerProjectPassesFilter')) {
+			dol_include_once('/leadtracker/lib/leadtracker.lib.php');
+		}
+		if (function_exists('leadtrackerProjectPassesFilter')
+			&& !leadtrackerProjectPassesFilter($projectId, $this->db)) {
+			return false;
+		}
+
+		// Load project — check usage_opportunity and current stage.
+		$sql = "SELECT fk_opp_status, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
+			." WHERE rowid = ".$projectId
+			." AND entity IN (".getEntity('projet').")";
+		$res = $this->db->query($sql);
+		if (!$res || !($obj = $this->db->fetch_object($res))) {
+			return false;
+		}
+		if (!(int) $obj->usage_opportunity) {
+			return false;
+		}
+
+		return $this->updateProjectValues($projectId, (int) $obj->fk_opp_status);
 	}
 
 	// -------------------------------------------------------------------------

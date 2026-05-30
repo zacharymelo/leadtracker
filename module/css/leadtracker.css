@@ -215,3 +215,74 @@
 		display: block;
 	}
 }
+
+/* --- Wrapper: holds tracker bar + sync toggle together --- */
+
+.leadtracker-wrap {
+	display: block;
+}
+
+/* --- Auto-sync toggle row --- */
+
+.leadtracker-sync-row {
+	display: flex;
+	align-items: center;
+	margin: 4px 2px 2px 2px;
+	font-size: 11px;
+}
+
+.leadtracker-sync-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	user-select: none;
+	color: var(--colortexttitlenotab, #888);
+}
+
+.leadtracker-sync-text {
+	font-size: 11px;
+	opacity: 0.85;
+}
+
+/* Toggle switch */
+.leadtracker-sync-switch {
+	position: relative;
+	display: inline-block;
+	width: 30px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
+.leadtracker-sync-check {
+	opacity: 0;
+	width: 0;
+	height: 0;
+	position: absolute;
+}
+
+.leadtracker-sync-slider {
+	position: absolute;
+	inset: 0;
+	background: #ccc;
+	border-radius: 16px;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+.leadtracker-sync-slider::before {
+	content: '';
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	left: 3px;
+	top: 3px;
+	background: #fff;
+	border-radius: 50%;
+	transition: transform 0.2s;
+}
+.leadtracker-sync-check:checked ~ .leadtracker-sync-slider {
+	background: var(--leadtracker-complete, #2e7d32);
+}
+.leadtracker-sync-check:checked ~ .leadtracker-sync-slider::before {
+	transform: translateX(14px);
+}

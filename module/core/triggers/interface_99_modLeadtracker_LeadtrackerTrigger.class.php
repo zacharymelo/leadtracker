@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.1.4';
+	public $version     = '1.1.5';
 	public $picto       = 'projectpub';
 
 	/**
@@ -58,6 +58,17 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 	public function runTrigger($action, $object, User $user, Translate $langs, Conf $conf)
 	{
 		if (!isModEnabled('leadtracker')) {
+			return 0;
+		}
+
+		// Project-save events: recalculate values only (no stage advancement).
+		if ($action === 'PROJECT_MODIFY' || $action === 'PROJECT_CREATE') {
+			if (empty($object->id)) {
+				return 0;
+			}
+			require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
+			$automation = new LeadtrackerAutomation($this->db);
+			$automation->recalculateValues((int) $object->id);
 			return 0;
 		}
 

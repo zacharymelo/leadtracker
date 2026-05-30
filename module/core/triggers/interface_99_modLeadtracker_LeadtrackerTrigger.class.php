@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.1.14';
+	public $version     = '1.1.15';
 	public $picto       = 'projectpub';
 
 	/**
@@ -132,7 +132,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 	 *  Collect project IDs linked to the triggering object.
 	 *
 	 *  Checks direct FK columns (fk_projet for documents, fk_project for
-	 *  actioncomm) and also llx_element_element for links added after creation.
+	 *  actioncomm) and also element_element for links added after creation.
 	 *
 	 *  @param  object  $object  The triggering native object
 	 *  @return int[]             Unique project IDs

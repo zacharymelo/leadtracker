@@ -58,7 +58,7 @@ class modLeadtracker extends DolibarrModules
 		$this->editor_name = 'Lead Tracker contributors';
 		$this->editor_url = '';
 
-		$this->version = '1.1.14';
+		$this->version = '1.1.15';
 
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 
@@ -126,7 +126,7 @@ class modLeadtracker extends DolibarrModules
 
 	/**
 	 *  Called when module is enabled. Creates the DB table and registers constants/permissions.
-	 *  Uses _load_tables() so run_sql() substitutes llx_ with MAIN_DB_PREFIX for non-default prefixes.
+	 *  Uses _load_tables() so run_sql() substitutes  with MAIN_DB_PREFIX for non-default prefixes.
 	 *
 	 *  @param  string  $options  Options
 	 *  @return int                1 if OK, 0 if KO

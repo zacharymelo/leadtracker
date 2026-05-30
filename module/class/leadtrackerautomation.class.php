@@ -37,7 +37,7 @@
  *    4. Average of open proposals    — estimated pipeline value
  *
  *  Percent (LEADTRACKER_PERCENT_MODE = 'stage_default') is read from the
- *  llx_c_lead_status.percent column for the current stage.
+ *  c_lead_status.percent column for the current stage.
  */
 class LeadtrackerAutomation
 {
@@ -151,7 +151,7 @@ class LeadtrackerAutomation
 
 	/**
 	 *  Recalculate opp_amount and/or opp_percent according to module config and
-	 *  write to llx_projet.
+	 *  write to projet.
 	 *
 	 *  @param  int  $projectId
 	 *  @param  int  $statusId   Current (or new) fk_opp_status rowid
@@ -251,7 +251,7 @@ class LeadtrackerAutomation
 	}
 
 	/**
-	 *  Read a single numeric extrafield value from llx_projet_extrafields.
+	 *  Read a single numeric extrafield value from projet_extrafields.
 	 *
 	 *  @param  int     $projectId
 	 *  @param  string  $fieldName  Attribute code (alphanumeric + underscore only)
@@ -279,7 +279,7 @@ class LeadtrackerAutomation
 	/**
 	 *  Sum total_ttc of linked documents matching a status clause.
 	 *
-	 *  Checks both the direct fk_projet column and llx_element_element links.
+	 *  Checks both the direct fk_projet column and element_element links.
 	 *  $statusWhere is a pre-constructed SQL fragment — only called internally
 	 *  with hardcoded safe values.
 	 *
@@ -330,7 +330,7 @@ class LeadtrackerAutomation
 
 	/**
 	 *  Collect unique document rowids linked to the project via both fk_projet
-	 *  and llx_element_element, filtered by a status clause.
+	 *  and element_element, filtered by a status clause.
 	 *
 	 *  @param  string  $table        Table base name
 	 *  @param  int     $projectId
@@ -379,9 +379,9 @@ class LeadtrackerAutomation
 	}
 
 	/**
-	 *  Read the default percentage for a stage from llx_c_lead_status.percent.
+	 *  Read the default percentage for a stage from c_lead_status.percent.
 	 *
-	 *  @param  int  $stageId  llx_c_lead_status.rowid
+	 *  @param  int  $stageId  c_lead_status.rowid
 	 *  @return float|null      Null if not found
 	 */
 	private function getStagePercent($stageId)
@@ -549,7 +549,7 @@ class LeadtrackerAutomation
 		// Three ways Dolibarr can link an actioncomm to a project:
 		//   1. fk_project direct FK
 		//   2. fk_element / elementtype = 'project' (generic element link)
-		//   3. llx_actioncomm_resources row with element_type = 'project'
+		//   3. actioncomm_resources row with element_type = 'project'
 		//      (used by auto-created email events from project card in v22+)
 		$sql = "SELECT COUNT(a.rowid) as cnt"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
@@ -570,7 +570,7 @@ class LeadtrackerAutomation
 
 	/**
 	 *  Check for at least one linked document meeting the status threshold.
-	 *  Checks both fk_projet column and llx_element_element.
+	 *  Checks both fk_projet column and element_element.
 	 *
 	 *  @param  string  $table     Table base name
 	 *  @param  int     $projectId
@@ -622,7 +622,7 @@ class LeadtrackerAutomation
 	}
 
 	/**
-	 *  Write a new stage rowid to llx_projet.
+	 *  Write a new stage rowid to projet.
 	 *
 	 *  @param  int  $projectId
 	 *  @param  int  $newStatusId

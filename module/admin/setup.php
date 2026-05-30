@@ -217,7 +217,7 @@ if (!empty($stages)) {
 	}
 }
 
-// Load project categories for the flag selector (type = 6 for projects in llx_categorie)
+// Load project categories for the flag selector (type = 6 for projects in categorie)
 $projectCatTypeInt = 6;
 if (class_exists('Categorie')) {
 	$tmpCat = new Categorie($db);

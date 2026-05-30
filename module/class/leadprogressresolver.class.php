@@ -43,7 +43,7 @@ class LeadProgressResolver
 	/** @var DoliDB */
 	public $db;
 
-	/** @var array  Raw stage rows from llx_c_lead_status */
+	/** @var array  Raw stage rows from c_lead_status */
 	public $stages = array();
 
 	/** @var string  Current stage code resolved by this instance */
@@ -150,7 +150,7 @@ class LeadProgressResolver
 	 *  decision or terminal WON/LOST), it wins.
 	 *
 	 *  @param  array  $stageConfigs  Map of rowid => [condition_type, ...]
-	 *  @param  int    $fkOppStatus   Stored fk_opp_status from llx_projet
+	 *  @param  int    $fkOppStatus   Stored fk_opp_status from projet
 	 *  @return int|null               Stage rowid, or null if nothing resolved
 	 */
 	private function resolveCurrentRowid($stageConfigs, $fkOppStatus)
@@ -259,7 +259,7 @@ class LeadProgressResolver
 		// Three ways Dolibarr can link an actioncomm to a project:
 		//   1. fk_project direct FK
 		//   2. fk_element / elementtype = 'project' (generic element link)
-		//   3. llx_actioncomm_resources row with element_type = 'project'
+		//   3. actioncomm_resources row with element_type = 'project'
 		//      (used by auto-created email events from project card in v22+)
 		$sql = "SELECT COUNT(a.rowid) as cnt"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
@@ -280,7 +280,7 @@ class LeadProgressResolver
 
 	/**
 	 *  Check for a linked document meeting the status threshold.
-	 *  Checks both fk_projet column and llx_element_element.
+	 *  Checks both fk_projet column and element_element.
 	 *
 	 *  @param  string  $table        Table base name (without prefix)
 	 *  @param  int     $projectId

@@ -149,7 +149,7 @@ if ($projectId > 0) {
 		}
 	}
 
-	// Method 3: llx_actioncomm_resources (many-to-many resource table)
+	// Method 3: actioncomm_resources (many-to-many resource table)
 	$sqlAR = "SELECT a.rowid, a.ref, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label,"
 		." ar.element_type as res_element_type, ar.fk_element as res_fk_element"
 		." FROM ".MAIN_DB_PREFIX."actioncomm a"
@@ -175,7 +175,7 @@ if ($projectId > 0) {
 		}
 	}
 
-	// Method 4: llx_element_element bidirectional link
+	// Method 4: element_element bidirectional link
 	$sqlEE = "SELECT a.rowid, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
 		." FROM ".MAIN_DB_PREFIX."actioncomm a"
 		." INNER JOIN ".MAIN_DB_PREFIX."element_element ee ON ("

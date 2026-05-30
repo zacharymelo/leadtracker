@@ -541,31 +541,35 @@ class LeadtrackerAutomation
 	 */
 	private function hasOutboundContact($projectId)
 	{
-		// Do not filter by action code — Dolibarr uses different codes depending
-		// on where the email/call is triggered (AC_EMAIL, AC_OTH_AUTO, etc.).
-		// Exclude only systemauto events (project created, validated, etc.) which
-		// have a gear icon and are never user-initiated contact.
+		// IMPORTANT: the actioncomm table's primary key is `id`, NOT `rowid`
+		// (a Dolibarr legacy quirk). Querying a.rowid throws "Unknown column"
+		// and the whole query silently returns false. Always use a.id here.
 		$pid = (int) $projectId;
 
 		// Four ways Dolibarr can link an actioncomm to a project:
 		//   1. fk_project direct FK
 		//   2. fk_element / elementtype = 'project' (generic element link)
 		//   3. actioncomm_resources row with element_type = 'project'
-		//   4. Fallback: actioncomm.fk_soc matches the project's fk_soc — Dolibarr's
-		//      "send email from project card" auto-event is stored against the company,
-		//      not the project directly, and the project agenda page shows it via
-		//      the shared fk_soc. This makes it detectable as contact evidence.
-		$sql = "SELECT COUNT(a.rowid) as cnt"
+		//   4. Fallback: actioncomm.fk_soc matches the project's fk_soc — covers
+		//      "email sent from the company card" (AC_COMPANY_SENTBYMAIL), which is
+		//      stored against the company, not the project.
+		//
+		// Every project also accumulates system gear-icon events (AC_PROJECT_CREATE,
+		// _MODIFY, _VALIDATE, AC_ORDER_DELETE, ...) all carrying fk_project. Those are
+		// NOT contact. There is no `type` column to filter them out, so we use a
+		// positive code allowlist instead: real outbound contact is an email-send
+		// event (code LIKE '%SENTBYMAIL') or a manually logged call/meeting/email/fax.
+		$sql = "SELECT COUNT(a.id) as cnt"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
 			." LEFT JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar"
-			."  ON ar.fk_actioncomm = a.rowid AND ar.element_type = 'project' AND ar.fk_element = ".$pid
+			."  ON ar.fk_actioncomm = a.id AND ar.element_type = 'project' AND ar.fk_element = ".$pid
 			." LEFT JOIN ".MAIN_DB_PREFIX."projet p"
 			."  ON p.rowid = ".$pid." AND p.fk_soc IS NOT NULL AND p.fk_soc > 0 AND a.fk_soc = p.fk_soc"
 			." WHERE (a.fk_project = ".$pid
 			."  OR (a.fk_element = ".$pid." AND a.elementtype = 'project')"
 			."  OR ar.rowid IS NOT NULL"
 			."  OR p.rowid IS NOT NULL)"
-			." AND a.type != 'systemauto'"
+			." AND (a.code LIKE '%SENTBYMAIL' OR a.code IN ('AC_TEL', 'AC_RDV', 'AC_EMAIL', 'AC_FAX'))"
 			." AND a.entity IN (".getEntity('actioncomm').")";
 		$res = $this->db->query($sql);
 		if (!$res) {

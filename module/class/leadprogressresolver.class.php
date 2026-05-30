@@ -248,10 +248,12 @@ class LeadProgressResolver
 	 */
 	private function checkContact($projectId)
 	{
-		$codes = array("'AC_TEL'", "'AC_EMAIL'", "'AC_RDV'");
+		// Do not filter by action code — Dolibarr uses different codes depending
+		// on where the email/call is triggered (AC_EMAIL, AC_OTH, empty, etc.).
+		// Exclude only systemauto events (project created, validated, etc.) which
+		// have a gear icon and are never user-initiated contact.
 		$sql = "SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX."actioncomm"
 			." WHERE fk_project = ".(int) $projectId
-			." AND code IN (".implode(',', $codes).")"
 			." AND type != 'systemauto'"
 			." AND entity IN (".getEntity('actioncomm').")";
 		$res = $this->db->query($sql);

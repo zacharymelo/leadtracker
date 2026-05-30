@@ -126,25 +126,51 @@ if ($resC) {
 $projectId = GETPOSTINT('project_id');
 if ($projectId > 0) {
 	$pid = (int) $projectId;
-	$sqlAC = "SELECT rowid, ref, type, code, fk_project, fk_element, elementtype, label"
-		." FROM ".MAIN_DB_PREFIX."actioncomm"
-		." WHERE (fk_project = ".$pid
-		."  OR (fk_element = ".$pid." AND elementtype = 'project'))"
-		." AND entity IN (".getEntity('actioncomm').")"
-		." ORDER BY rowid DESC LIMIT 30";
+	// Method 1 + 2: fk_project / fk_element direct columns
+	$sqlAC = "SELECT a.rowid, a.ref, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
+		." FROM ".MAIN_DB_PREFIX."actioncomm a"
+		." WHERE (a.fk_project = ".$pid
+		."  OR (a.fk_element = ".$pid." AND a.elementtype = 'project'))"
+		." AND a.entity IN (".getEntity('actioncomm').")"
+		." ORDER BY a.rowid DESC LIMIT 30";
 	$resAC = $db->query($sqlAC);
-	$out['actioncomms'] = array();
+	$out['actioncomms_direct'] = array();
 	if ($resAC) {
 		while ($row = $db->fetch_object($resAC)) {
-			$out['actioncomms'][] = array(
+			$out['actioncomms_direct'][] = array(
 				'rowid'       => (int) $row->rowid,
-				'ref'         => $row->ref,
 				'type'        => $row->type,
 				'code'        => $row->code,
 				'fk_project'  => $row->fk_project,
 				'fk_element'  => $row->fk_element,
 				'elementtype' => $row->elementtype,
 				'label'       => $row->label,
+			);
+		}
+	}
+
+	// Method 3: llx_actioncomm_resources (many-to-many resource table)
+	$sqlAR = "SELECT a.rowid, a.ref, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label,"
+		." ar.element_type as res_element_type, ar.fk_element as res_fk_element"
+		." FROM ".MAIN_DB_PREFIX."actioncomm a"
+		." INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar ON ar.fk_actioncomm = a.rowid"
+		." WHERE ar.element_type = 'project' AND ar.fk_element = ".$pid
+		." AND a.entity IN (".getEntity('actioncomm').")"
+		." ORDER BY a.rowid DESC LIMIT 30";
+	$resAR = $db->query($sqlAR);
+	$out['actioncomms_resources'] = array();
+	if ($resAR) {
+		while ($row = $db->fetch_object($resAR)) {
+			$out['actioncomms_resources'][] = array(
+				'rowid'            => (int) $row->rowid,
+				'type'             => $row->type,
+				'code'             => $row->code,
+				'fk_project'       => $row->fk_project,
+				'fk_element'       => $row->fk_element,
+				'elementtype'      => $row->elementtype,
+				'label'            => $row->label,
+				'res_element_type' => $row->res_element_type,
+				'res_fk_element'   => $row->res_fk_element,
 			);
 		}
 	}

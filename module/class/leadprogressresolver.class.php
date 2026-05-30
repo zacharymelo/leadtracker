@@ -256,11 +256,20 @@ class LeadProgressResolver
 		// Exclude only systemauto events (project created, validated, etc.) which
 		// have a gear icon and are never user-initiated contact.
 		$pid = (int) $projectId;
-		$sql = "SELECT COUNT(rowid) as cnt FROM ".MAIN_DB_PREFIX."actioncomm"
-			." WHERE (fk_project = ".$pid
-			."  OR (fk_element = ".$pid." AND elementtype = 'project'))"
-			." AND type != 'systemauto'"
-			." AND entity IN (".getEntity('actioncomm').")";
+		// Three ways Dolibarr can link an actioncomm to a project:
+		//   1. fk_project direct FK
+		//   2. fk_element / elementtype = 'project' (generic element link)
+		//   3. llx_actioncomm_resources row with element_type = 'project'
+		//      (used by auto-created email events from project card in v22+)
+		$sql = "SELECT COUNT(a.rowid) as cnt"
+			." FROM ".MAIN_DB_PREFIX."actioncomm a"
+			." LEFT JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar"
+			."  ON ar.fk_actioncomm = a.rowid AND ar.element_type = 'project' AND ar.fk_element = ".$pid
+			." WHERE (a.fk_project = ".$pid
+			."  OR (a.fk_element = ".$pid." AND a.elementtype = 'project')"
+			."  OR ar.rowid IS NOT NULL)"
+			." AND a.type != 'systemauto'"
+			." AND a.entity IN (".getEntity('actioncomm').")";
 		$res = $this->db->query($sql);
 		if (!$res) {
 			return false;

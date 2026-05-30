@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.1.1';
+	public $version     = '1.1.2';
 	public $picto       = 'projectpub';
 
 	/**
@@ -62,12 +62,18 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 		}
 
 		$watched = array(
+			// Stage-advancing document events
 			'PROPAL_VALIDATE',
 			'PROPAL_SIGN',
 			'ORDER_VALIDATE',
 			'COMMANDE_VALIDATE',
 			'BILL_VALIDATE',
+			// Contact events — logged actions and sending docs by email
 			'ACTION_CREATE',
+			'ACTION_MODIFY',
+			'PROPAL_SENTBYMAIL',
+			'ORDER_SENTBYMAIL',
+			'BILL_SENTBYMAIL',
 		);
 
 		if (!in_array($action, $watched)) {
@@ -82,8 +88,17 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 		require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
 		$automation = new LeadtrackerAutomation($this->db);
 
+		// For send-by-mail events, outbound contact is a known fact — pass it
+		// directly so the automation does not need to rely on an actioncomm entry
+		// being present (which only happens when Dolibarr's "create event on send"
+		// global option is enabled).
+		$forcedEvidence = array();
+		if (in_array($action, array('PROPAL_SENTBYMAIL', 'ORDER_SENTBYMAIL', 'BILL_SENTBYMAIL'))) {
+			$forcedEvidence['has_outbound_contact'] = true;
+		}
+
 		foreach ($projectIds as $pid) {
-			$automation->maybeAdvance((int) $pid);
+			$automation->maybeAdvance((int) $pid, $forcedEvidence);
 		}
 
 		return 0;

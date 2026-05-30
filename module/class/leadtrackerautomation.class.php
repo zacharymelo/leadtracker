@@ -56,10 +56,13 @@ class LeadtrackerAutomation
 	 *  Evaluate stages after the current one and advance if any condition passes.
 	 *  Always recalculates project values (amount, percent) after the stage check.
 	 *
-	 *  @param  int  $projectId
+	 *  @param  int    $projectId
+	 *  @param  array  $forcedEvidence  Condition types pre-satisfied by the trigger
+	 *                                  event itself (e.g. has_outbound_contact for
+	 *                                  PROPAL_SENTBYMAIL). Merged with live checks.
 	 *  @return bool  True if the stage was advanced
 	 */
-	public function maybeAdvance($projectId)
+	public function maybeAdvance($projectId, $forcedEvidence = array())
 	{
 		$projectId = (int) $projectId;
 
@@ -119,7 +122,7 @@ class LeadtrackerAutomation
 
 				$anyPassed = false;
 				foreach ($conditions as $cond) {
-					if ($this->evalCondition($cond->condition_type, $projectId)) {
+					if ($this->evalCondition($cond->condition_type, $projectId, $forcedEvidence)) {
 						$anyPassed = true;
 						break;
 					}
@@ -351,13 +354,20 @@ class LeadtrackerAutomation
 
 	/**
 	 *  Evaluate a single condition type against the project's linked data.
+	 *  forcedEvidence values (passed from the trigger) short-circuit the live DB
+	 *  check — used when the trigger event itself proves the condition is met.
 	 *
 	 *  @param  string  $conditionType
 	 *  @param  int     $projectId
+	 *  @param  array   $forcedEvidence  Map of condition_type => bool
 	 *  @return bool
 	 */
-	private function evalCondition($conditionType, $projectId)
+	private function evalCondition($conditionType, $projectId, $forcedEvidence = array())
 	{
+		if (!empty($forcedEvidence[$conditionType])) {
+			return true;
+		}
+
 		switch ($conditionType) {
 			case 'has_outbound_contact':
 				return $this->hasOutboundContact($projectId);

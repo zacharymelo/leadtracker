@@ -165,7 +165,12 @@ class ActionsLeadtracker
 		$out .= '<div class="leadtracker-wrap">';
 		$out .= $renderer->render($steps, $user);
 		$out .= '</div>';
-		$out .= $this->syncToggle((int) $object->id, $autoSync);
+		// Only inject the toggle in view mode. In edit/create mode the card is already
+		// inside a <form>; our button would become a nested form (invalid HTML) and the
+		// browser would submit the parent form instead of ours.
+		if ($action !== 'edit' && $action !== 'create') {
+			$out .= $this->syncToggle((int) $object->id, $autoSync);
+		}
 		$out .= '</div>'."\n";
 
 		if ($this->getConf('LEADTRACKER_DEBUG', '0') == '1' && !empty($user->admin)) {
@@ -300,7 +305,11 @@ class ActionsLeadtracker
 	/**
 	 *  Render the auto-sync toggle. Relocated by JS into div.tabsAction so it sits
 	 *  at the start of the card's native action button row (Send email, Modify, etc.).
+	 *  Only rendered in view mode — not injected during edit/create (see formObjectOptions).
 	 *  Red = auto-sync on; gray = manual override.
+	 *
+	 *  Uses type="button" + a JS-created form appended to <body> so the POST is never
+	 *  a nested form regardless of the surrounding page structure.
 	 *
 	 *  @param  int   $projectId
 	 *  @param  bool  $autoSync  Current state
@@ -316,22 +325,40 @@ class ActionsLeadtracker
 		$label    = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOn' : 'LeadtrackerAutoSyncOff');
 		$title    = $langs->trans($autoSync ? 'LeadtrackerAutoSyncOnHelp' : 'LeadtrackerAutoSyncOffHelp');
 		$ajaxUrl  = dol_buildpath('/leadtracker/ajax/toggle_sync.php', 1);
-		$backurl  = htmlspecialchars(urlencode($_SERVER['REQUEST_URI'] ?? ''), ENT_QUOTES, 'UTF-8');
+		$backurl  = urlencode($_SERVER['REQUEST_URI'] ?? '');
+		$token    = newToken();
 		$btnClass = 'butAction leadtracker-sync-btn '.($autoSync ? 'leadtracker-sync-on' : 'leadtracker-sync-off');
 
-		// .divButAction aligns the button vertically with Dolibarr's native action buttons.
+		// All values go in data-* attributes; the JS reads them and builds a temporary
+		// form appended to <body> so it is never nested inside another form.
 		$out  = '<div class="leadtracker-sync-row inline-block divButAction">';
-		$out .= '<form method="post" action="'.dol_escape_htmltag($ajaxUrl).'" style="margin:0;padding:0;">';
-		$out .= '<input type="hidden" name="token" value="'.dol_escape_htmltag(newToken()).'">';
-		$out .= '<input type="hidden" name="project_id" value="'.(int) $projectId.'">';
-		$out .= '<input type="hidden" name="auto_sync" value="'.(int) $newVal.'">';
-		$out .= '<input type="hidden" name="backurl" value="'.$backurl.'">';
-		$out .= '<button type="submit" class="'.dol_escape_htmltag($btnClass).'"';
-		$out .= ' title="'.dol_escape_htmltag($title).'">';
+		$out .= '<button type="button"';
+		$out .= ' class="'.dol_escape_htmltag($btnClass).'"';
+		$out .= ' title="'.dol_escape_htmltag($title).'"';
+		$out .= ' data-lt-url="'.dol_escape_htmltag($ajaxUrl).'"';
+		$out .= ' data-lt-token="'.dol_escape_htmltag($token).'"';
+		$out .= ' data-lt-pid="'.(int) $projectId.'"';
+		$out .= ' data-lt-val="'.(int) $newVal.'"';
+		$out .= ' data-lt-back="'.dol_escape_htmltag($backurl).'"';
+		$out .= ' onclick="leadtrackerSyncPost(this)">';
 		$out .= dol_escape_htmltag($label);
 		$out .= '</button>';
-		$out .= '</form>';
 		$out .= '</div>';
+
+		// Helper — defined once per page via a window flag.
+		$out .= '<script>';
+		$out .= 'if(!window.leadtrackerSyncPost){';
+		$out .= 'window.leadtrackerSyncPost=function(b){';
+		$out .= 'var f=document.createElement("form");';
+		$out .= 'f.method="post";f.action=b.dataset.ltUrl;f.style.display="none";';
+		$out .= 'var h=function(n,v){var i=document.createElement("input");i.type="hidden";i.name=n;i.value=v;f.appendChild(i);};';
+		$out .= 'h("token",b.dataset.ltToken);';
+		$out .= 'h("project_id",b.dataset.ltPid);';
+		$out .= 'h("auto_sync",b.dataset.ltVal);';
+		$out .= 'h("backurl",b.dataset.ltBack);';
+		$out .= 'document.body.appendChild(f);f.submit();';
+		$out .= '};}';
+		$out .= '</script>';
 
 		return $out;
 	}

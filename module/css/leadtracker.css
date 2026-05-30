@@ -230,9 +230,18 @@
 	margin: 0 12px 0 0;
 }
 
-/* Base button — inherits shape from butAction; this class adds the color overrides */
+/* Base button — butAction gives shape for <a> tags but not <button> elements.
+   Reset browser UA defaults so our <button> renders identically to the native links. */
 .leadtracker-sync-btn {
 	white-space: nowrap;
+	border: none;
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	vertical-align: middle;
 }
 
 /* ON = red — double-class selector beats .butAction's background (0,2,0 > 0,1,0) */

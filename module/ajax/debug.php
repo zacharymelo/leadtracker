@@ -127,19 +127,18 @@ $projectId = GETPOSTINT('project_id');
 if ($projectId > 0) {
 	$pid = (int) $projectId;
 	// Method 1 + 2: fk_project / fk_element direct columns
-	$sqlAC = "SELECT a.rowid, a.ref, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
+	$sqlAC = "SELECT a.id, a.ref, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
 		." FROM ".MAIN_DB_PREFIX."actioncomm a"
 		." WHERE (a.fk_project = ".$pid
 		."  OR (a.fk_element = ".$pid." AND a.elementtype = 'project'))"
 		." AND a.entity IN (".getEntity('actioncomm').")"
-		." ORDER BY a.rowid DESC LIMIT 30";
+		." ORDER BY a.id DESC LIMIT 30";
 	$resAC = $db->query($sqlAC);
 	$out['actioncomms_direct'] = array();
 	if ($resAC) {
 		while ($row = $db->fetch_object($resAC)) {
 			$out['actioncomms_direct'][] = array(
-				'rowid'       => (int) $row->rowid,
-				'type'        => $row->type,
+				'id'          => (int) $row->id,
 				'code'        => $row->code,
 				'fk_project'  => $row->fk_project,
 				'fk_element'  => $row->fk_element,
@@ -150,20 +149,19 @@ if ($projectId > 0) {
 	}
 
 	// Method 3: actioncomm_resources (many-to-many resource table)
-	$sqlAR = "SELECT a.rowid, a.ref, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label,"
+	$sqlAR = "SELECT a.id, a.ref, a.code, a.fk_project, a.fk_element, a.elementtype, a.label,"
 		." ar.element_type as res_element_type, ar.fk_element as res_fk_element"
 		." FROM ".MAIN_DB_PREFIX."actioncomm a"
-		." INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar ON ar.fk_actioncomm = a.rowid"
+		." INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar ON ar.fk_actioncomm = a.id"
 		." WHERE ar.element_type = 'project' AND ar.fk_element = ".$pid
 		." AND a.entity IN (".getEntity('actioncomm').")"
-		." ORDER BY a.rowid DESC LIMIT 30";
+		." ORDER BY a.id DESC LIMIT 30";
 	$resAR = $db->query($sqlAR);
 	$out['actioncomms_resources'] = array();
 	if ($resAR) {
 		while ($row = $db->fetch_object($resAR)) {
 			$out['actioncomms_resources'][] = array(
-				'rowid'            => (int) $row->rowid,
-				'type'             => $row->type,
+				'id'               => (int) $row->id,
 				'code'             => $row->code,
 				'fk_project'       => $row->fk_project,
 				'fk_element'       => $row->fk_element,
@@ -176,21 +174,20 @@ if ($projectId > 0) {
 	}
 
 	// Method 4: element_element bidirectional link
-	$sqlEE = "SELECT a.rowid, a.type, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
+	$sqlEE = "SELECT a.id, a.code, a.fk_project, a.fk_element, a.elementtype, a.label"
 		." FROM ".MAIN_DB_PREFIX."actioncomm a"
 		." INNER JOIN ".MAIN_DB_PREFIX."element_element ee ON ("
-		."  (ee.fk_source = a.rowid AND ee.sourcetype = 'actioncomm' AND ee.fk_target = ".$pid." AND ee.targettype = 'project')"
-		."  OR (ee.fk_target = a.rowid AND ee.targettype = 'actioncomm' AND ee.fk_source = ".$pid." AND ee.sourcetype = 'project')"
+		."  (ee.fk_source = a.id AND ee.sourcetype = 'actioncomm' AND ee.fk_target = ".$pid." AND ee.targettype = 'project')"
+		."  OR (ee.fk_target = a.id AND ee.targettype = 'actioncomm' AND ee.fk_source = ".$pid." AND ee.sourcetype = 'project')"
 		." )"
 		." AND a.entity IN (".getEntity('actioncomm').")"
-		." ORDER BY a.rowid DESC LIMIT 30";
+		." ORDER BY a.id DESC LIMIT 30";
 	$resEE = $db->query($sqlEE);
 	$out['actioncomms_element_element'] = array();
 	if ($resEE) {
 		while ($row = $db->fetch_object($resEE)) {
 			$out['actioncomms_element_element'][] = array(
-				'rowid'       => (int) $row->rowid,
-				'type'        => $row->type,
+				'id'          => (int) $row->id,
 				'code'        => $row->code,
 				'fk_project'  => $row->fk_project,
 				'fk_element'  => $row->fk_element,
@@ -206,7 +203,7 @@ if ($projectId > 0) {
 	$actioncommId = GETPOSTINT('actioncomm_id');
 	if ($actioncommId > 0) {
 		$sqlRaw = "SELECT * FROM ".MAIN_DB_PREFIX."actioncomm"
-			." WHERE rowid = ".(int) $actioncommId;
+			." WHERE id = ".(int) $actioncommId;
 		$resRaw = $db->query($sqlRaw);
 		if ($resRaw) {
 			$out['actioncomm_raw'] = $db->fetch_object($resRaw);
@@ -246,7 +243,7 @@ if ($projectId > 0 && !empty($out['project_fk_soc'])) {
 	$sqlSweep = "SELECT * FROM ".MAIN_DB_PREFIX."actioncomm"
 		." WHERE fk_soc = ".$socId
 		." AND entity IN (".getEntity('actioncomm').")"
-		." ORDER BY rowid DESC LIMIT 50";
+		." ORDER BY id DESC LIMIT 50";
 	$resSweep = $db->query($sqlSweep);
 	if ($resSweep) {
 		$out['actioncomms_by_company'] = array();

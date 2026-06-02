@@ -41,6 +41,9 @@ class LeadProgressRenderer
 	/** @var bool Show action link on the current stage */
 	public $actionLinks = true;
 
+	/** @var int|null Native project lifecycle status (0 draft, 1 validated, 2 closed) */
+	public $lifecycleStatus = null;
+
 	/**
 	 *  Render the tracker HTML.
 	 *
@@ -72,7 +75,12 @@ class LeadProgressRenderer
 		}
 
 		$classMode = $this->compact ? ' leadtracker-compact' : '';
-		$out = '<div class="leadtracker-tracker'.$classMode.'" role="list" aria-label="'.dol_escape_htmltag($langs->trans('LeadtrackerTitle')).'">';
+		// Draft and Closed projects are frozen — dim the whole track so it reads as
+		// "not actively progressing" without removing the information.
+		$mutedMode = in_array((int) $this->lifecycleStatus, array(0, 2), true) ? ' leadtracker-muted' : '';
+		$out = '<div class="leadtracker-tracker'.$classMode.$mutedMode.'" role="list" aria-label="'.dol_escape_htmltag($langs->trans('LeadtrackerTitle')).'">';
+
+		$out .= $this->lifecycleBadge();
 
 		$prevState = null;
 		foreach ($visible as $idx => $step) {
@@ -151,6 +159,32 @@ class LeadProgressRenderer
 		$out .= '</div>';
 
 		return $out;
+	}
+
+	/**
+	 *  Lifecycle status pill rendered ahead of the funnel. Only Draft and Closed
+	 *  are surfaced — a Validated project needs no badge (it is the normal case).
+	 *
+	 *  @return string  HTML (empty for validated / unknown)
+	 */
+	private function lifecycleBadge()
+	{
+		global $langs;
+
+		switch ((int) $this->lifecycleStatus) {
+			case 0:
+				$label = $langs->trans('LeadtrackerStatusDraft');
+				$cls   = 'leadtracker-badge-draft';
+				break;
+			case 2:
+				$label = $langs->trans('LeadtrackerStatusClosed');
+				$cls   = 'leadtracker-badge-closed';
+				break;
+			default:
+				return '';
+		}
+
+		return '<span class="leadtracker-badge '.$cls.'">'.dol_escape_htmltag($label).'</span>';
 	}
 
 	/**

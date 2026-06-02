@@ -76,7 +76,7 @@ class LeadtrackerAutomation
 		}
 
 		// Load project.
-		$sql = "SELECT rowid, fk_opp_status, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
+		$sql = "SELECT rowid, fk_opp_status, fk_statut, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
 			." WHERE rowid = ".$projectId
 			." AND entity IN (".getEntity('projet').")";
 		$res = $this->db->query($sql);
@@ -88,6 +88,17 @@ class LeadtrackerAutomation
 		if (!(int) $proj->usage_opportunity) {
 			return false;
 		}
+
+		// Lifecycle gate (projet.fk_statut: 0 draft, 1 validated, 2 closed):
+		//   - Closed   → fully frozen, no stage advance and no value recalc.
+		//   - Draft    → no stage advance, but values still recalc (kept warm for
+		//                the moment the project is validated).
+		//   - Validated→ normal behaviour.
+		$lifecycle = (int) $proj->fk_statut;
+		if ($lifecycle === 2) {
+			return false;
+		}
+		$canAdvance = ($lifecycle === 1);
 
 		$currentFkStatus = (int) $proj->fk_opp_status;
 
@@ -109,7 +120,7 @@ class LeadtrackerAutomation
 		// Skipped entirely when position is unknown (no stage set yet) — value
 		// updates still run below so amount is always kept fresh.
 		$newStatusId = null;
-		if ($currentPos !== null) {
+		if ($canAdvance && $currentPos !== null) {
 			foreach ($stages as $stage) {
 				if ((int) $stage->position <= $currentPos) {
 					continue;
@@ -433,8 +444,8 @@ class LeadtrackerAutomation
 			return false;
 		}
 
-		// Load project — check usage_opportunity and current stage.
-		$sql = "SELECT fk_opp_status, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
+		// Load project — check usage_opportunity, lifecycle, and current stage.
+		$sql = "SELECT fk_opp_status, fk_statut, usage_opportunity FROM ".MAIN_DB_PREFIX."projet"
 			." WHERE rowid = ".$projectId
 			." AND entity IN (".getEntity('projet').")";
 		$res = $this->db->query($sql);
@@ -442,6 +453,10 @@ class LeadtrackerAutomation
 			return false;
 		}
 		if (!(int) $obj->usage_opportunity) {
+			return false;
+		}
+		// Closed projects are frozen — leave their values untouched.
+		if ((int) $obj->fk_statut === 2) {
 			return false;
 		}
 

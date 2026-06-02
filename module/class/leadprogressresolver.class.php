@@ -40,6 +40,11 @@ class LeadProgressResolver
 	const STATE_WON      = 'won';
 	const STATE_LOST     = 'lost';
 
+	// Native project lifecycle (projet.fk_statut) — orthogonal to the funnel.
+	const PROJECT_DRAFT     = 0;
+	const PROJECT_VALIDATED = 1;
+	const PROJECT_CLOSED    = 2;
+
 	/** @var DoliDB */
 	public $db;
 
@@ -48,6 +53,9 @@ class LeadProgressResolver
 
 	/** @var string  Current stage code resolved by this instance */
 	public $currentCode = '';
+
+	/** @var int|null  Native project lifecycle status (fk_statut): 0 draft, 1 validated, 2 closed */
+	public $projectStatus = null;
 
 	/** @var array  Evidence flags keyed by condition_type — exposed for debug panel */
 	public $evidence = array();
@@ -77,23 +85,36 @@ class LeadProgressResolver
 
 		$stageConfigs = $this->loadStageConfigs();
 
-		// Hook sometimes delivers a partially-loaded project object where
-		// fk_opp_status is missing. Fetch it directly as a fallback.
-		if (empty($project->fk_opp_status) && !empty($project->id)) {
-			$sql = "SELECT fk_opp_status FROM ".MAIN_DB_PREFIX."projet"
+		// The hook sometimes delivers a partially-loaded project object. Read both
+		// fk_opp_status (funnel) and fk_statut (lifecycle) straight from the DB —
+		// fk_statut is fetched from the column rather than $project->statut/->status
+		// because that property name drifted across Dolibarr versions.
+		if (!empty($project->id)) {
+			$sql = "SELECT fk_opp_status, fk_statut FROM ".MAIN_DB_PREFIX."projet"
 				." WHERE rowid = ".((int) $project->id)
 				." AND entity IN (".getEntity('projet').")";
 			$res = $this->db->query($sql);
 			if ($res && $row = $this->db->fetch_object($res)) {
-				$project->fk_opp_status = (int) $row->fk_opp_status;
+				if (empty($project->fk_opp_status)) {
+					$project->fk_opp_status = (int) $row->fk_opp_status;
+				}
+				$this->projectStatus = (int) $row->fk_statut;
 			}
 		}
 
-		// Gather live evidence from linked documents.
+		// Gather live evidence from linked documents (always — the debug panel shows it).
 		$this->evidence = $this->gatherEvidence((int) $project->id);
 
+		// Lifecycle freeze: while the project is Draft or Closed, the funnel does not
+		// advance on evidence. Display reflects the stored fk_opp_status only, so the
+		// muted tracker matches reality. Evidence-driven progression resumes once the
+		// project is Validated.
+		$frozen = ($this->projectStatus === self::PROJECT_DRAFT
+			|| $this->projectStatus === self::PROJECT_CLOSED);
+		$evidenceForResolve = $frozen ? array() : $this->evidence;
+
 		// Determine which stage is current (evidence wins; fk_opp_status is the floor).
-		$currentRowid = $this->resolveCurrentRowid($stageConfigs, (int) $project->fk_opp_status);
+		$currentRowid = $this->resolveCurrentRowid($evidenceForResolve, $stageConfigs, (int) $project->fk_opp_status);
 
 		$currentPos = null;
 		$this->currentCode = '';
@@ -149,11 +170,12 @@ class LeadProgressResolver
 	 *  Status floor: if fk_opp_status is at an even higher position (manual
 	 *  decision or terminal WON/LOST), it wins.
 	 *
+	 *  @param  array  $evidence      Evidence flags to evaluate (empty = frozen)
 	 *  @param  array  $stageConfigs  Map of rowid => [condition_type, ...]
 	 *  @param  int    $fkOppStatus   Stored fk_opp_status from projet
 	 *  @return int|null               Stage rowid, or null if nothing resolved
 	 */
-	private function resolveCurrentRowid($stageConfigs, $fkOppStatus)
+	private function resolveCurrentRowid($evidence, $stageConfigs, $fkOppStatus)
 	{
 		// Evidence pass.
 		$evidenceRowid = null;
@@ -169,7 +191,7 @@ class LeadProgressResolver
 			}
 
 			foreach ($conditions as $ctype) {
-				if ($ctype !== 'manual_only' && !empty($this->evidence[$ctype])) {
+				if ($ctype !== 'manual_only' && !empty($evidence[$ctype])) {
 					if ($pos > $evidencePos) {
 						$evidencePos   = $pos;
 						$evidenceRowid = $rowid;

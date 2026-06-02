@@ -151,10 +151,11 @@ class ActionsLeadtracker
 		}
 
 		$renderer = new LeadProgressRenderer();
-		$renderer->compact     = ($this->getConf('LEADTRACKER_DISPLAY_MODE', 'full') === 'compact');
-		$renderer->hideSkipped = ($this->getConf('LEADTRACKER_SKIPPED_BEHAVIOR', 'show') === 'hide');
-		$renderer->clickable   = ($this->getConf('LEADTRACKER_CLICKABLE', '1') == '1');
-		$renderer->actionLinks = ($this->getConf('LEADTRACKER_ACTION_LINKS', '1') == '1');
+		$renderer->compact         = ($this->getConf('LEADTRACKER_DISPLAY_MODE', 'full') === 'compact');
+		$renderer->hideSkipped     = ($this->getConf('LEADTRACKER_SKIPPED_BEHAVIOR', 'show') === 'hide');
+		$renderer->clickable       = ($this->getConf('LEADTRACKER_CLICKABLE', '1') == '1');
+		$renderer->actionLinks     = ($this->getConf('LEADTRACKER_ACTION_LINKS', '1') == '1');
+		$renderer->lifecycleStatus = $resolver->projectStatus;
 
 		$autoSync = $this->getAutoSync((int) $object->id);
 
@@ -266,8 +267,13 @@ class ActionsLeadtracker
 	 */
 	private function debugPanel($resolver, $steps, $object)
 	{
+		$lifecycleMap = array(0 => 'draft', 1 => 'validated', 2 => 'closed');
+		$lifecycle    = $resolver->projectStatus;
+		$lifecycleStr = isset($lifecycleMap[$lifecycle]) ? $lifecycleMap[$lifecycle] : (string) $lifecycle;
+
 		$out  = '<div class="leadtracker-debug"><strong>Leadtracker debug</strong>';
 		$out .= ' &mdash; fk_opp_status: '.dol_escape_htmltag((string) $object->fk_opp_status);
+		$out .= ' &mdash; fk_statut: '.dol_escape_htmltag($lifecycleStr);
 		$out .= ' &mdash; current code: '.dol_escape_htmltag($resolver->currentCode).'<br>';
 
 		if (!empty($resolver->evidence)) {

@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.1.19';
+	public $version     = '1.2.0';
 	public $picto       = 'projectpub';
 
 	/**
@@ -69,6 +69,19 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 			require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
 			$automation = new LeadtrackerAutomation($this->db);
 			$automation->recalculateValues((int) $object->id);
+			return 0;
+		}
+
+		// Lifecycle goes live (Draft->Validated, or Closed->Reopened): the funnel was
+		// frozen, so re-evaluate stages now in case evidence accumulated while frozen
+		// (e.g. an email was sent before the project was validated).
+		if ($action === 'PROJECT_VALIDATE' || $action === 'PROJECT_REOPEN') {
+			if (empty($object->id)) {
+				return 0;
+			}
+			require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
+			$automation = new LeadtrackerAutomation($this->db);
+			$automation->maybeAdvance((int) $object->id);
 			return 0;
 		}
 

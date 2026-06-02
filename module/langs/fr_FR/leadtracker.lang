@@ -9,6 +9,8 @@ Module500121Desc = Suivi visuel du pipeline et moteur d'automatisation pour les 
 # UI
 LeadtrackerTitle = Pipeline commercial
 LeadtrackerNotApplicable = Non applicable
+LeadtrackerStatusDraft = Brouillon
+LeadtrackerStatusClosed = Clôturé
 
 # Page de configuration
 LeadtrackerSetup = Configuration du Lead Tracker

@@ -9,6 +9,8 @@ Module500121Desc = Visual pipeline tracker and automation engine for Dolibarr op
 # UI
 LeadtrackerTitle = Lead pipeline
 LeadtrackerNotApplicable = Not applicable
+LeadtrackerStatusDraft = Draft
+LeadtrackerStatusClosed = Closed
 
 # Setup page
 LeadtrackerSetup = Lead Tracker setup

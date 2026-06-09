@@ -91,15 +91,9 @@
 	margin-top: 3px;
 	font-size: 10px;
 	line-height: 1.2;
-	color: var(--colortextlink, #888);
-	opacity: 0.85;
+	color: #999;
 	max-width: 110px;
 	overflow-wrap: break-word;
-}
-
-/* A step carrying a tooltip hints it is hoverable (action steps keep pointer). */
-.leadtracker-step[title] {
-	cursor: help;
 }
 
 /* Links should not look like default underlined anchors. */
@@ -176,18 +170,20 @@
 
 /* --- Lifecycle status (native projet.fk_statut) --- */
 
-/* The badge sits on its own line above the funnel (flex-basis forces a wrap). */
+/* The badge sits on its own line above the funnel (flex-basis forces a wrap).
+   max-width: max-content stops the flex item from stretching to full width — without
+   it the orange background fills the entire tracker bar like a banner. */
 .leadtracker-badge {
 	flex: 0 0 100%;
+	max-width: max-content;
 	align-self: flex-start;
 	display: inline-block;
-	width: auto;
-	margin: 0 0 10px 0;
-	padding: 2px 8px;
-	border-radius: 10px;
-	font-size: 11px;
-	font-weight: bold;
-	letter-spacing: 0.02em;
+	margin: 0 0 8px 0;
+	padding: 2px 10px;
+	border-radius: 20px;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
 }
 .leadtracker-badge-draft {

@@ -160,15 +160,16 @@ class LeadProgressRenderer
 		$out .= '<span class="leadtracker-circle" aria-hidden="true">'.$circleInner.'</span>';
 		$out .= '<span class="leadtracker-label">'.dol_escape_htmltag($step['label']).'</span>';
 
+		if ($canLink) {
+			$out .= '</a>';
+		}
+
+		// Subtitle is always outside the <a> so it never inherits link colour.
 		if ($this->showDetails) {
 			$subtitle = $this->stepSubtitle($step, $state);
 			if ($subtitle !== '') {
 				$out .= '<span class="leadtracker-subtitle">'.dol_escape_htmltag($subtitle).'</span>';
 			}
-		}
-
-		if ($canLink) {
-			$out .= '</a>';
 		}
 
 		$out .= '</div>';

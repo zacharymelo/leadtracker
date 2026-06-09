@@ -108,9 +108,13 @@
 	text-decoration: underline;
 }
 
-/* Done links (view the record that completed the stage) — subtle, no arrow. */
+/* Done links (view the record that completed the stage). */
 .leadtracker-link.leadtracker-done {
 	cursor: pointer;
+}
+.leadtracker-link.leadtracker-done .leadtracker-label::after {
+	content: " \2197"; /* ↗ — "view" vs → "act" */
+	opacity: 0.45;
 }
 .leadtracker-link.leadtracker-done:hover .leadtracker-circle {
 	filter: brightness(1.06);

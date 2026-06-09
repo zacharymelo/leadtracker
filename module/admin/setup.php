@@ -146,7 +146,7 @@ if ($action == 'update') {
 	}
 
 	// --- Display ---
-	$boolKeys = array('LEADTRACKER_CLICKABLE', 'LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_SHOW_DETAILS', 'LEADTRACKER_DEBUG');
+	$boolKeys = array('LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_SHOW_DETAILS', 'LEADTRACKER_DEBUG');
 	foreach ($boolKeys as $key) {
 		$val = GETPOST($key, 'alpha') ? '1' : '0';
 		if (dolibarr_set_const($db, $key, $val, 'chaine', 0, '', $conf->entity) < 0) {

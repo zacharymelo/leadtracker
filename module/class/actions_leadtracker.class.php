@@ -153,7 +153,7 @@ class ActionsLeadtracker
 		$renderer = new LeadProgressRenderer();
 		$renderer->compact         = ($this->getConf('LEADTRACKER_DISPLAY_MODE', 'full') === 'compact');
 		$renderer->hideSkipped     = ($this->getConf('LEADTRACKER_SKIPPED_BEHAVIOR', 'show') === 'hide');
-		$renderer->clickable       = ($this->getConf('LEADTRACKER_CLICKABLE', '1') == '1');
+		$renderer->clickable       = true;
 		$renderer->actionLinks     = ($this->getConf('LEADTRACKER_ACTION_LINKS', '1') == '1');
 		$renderer->showDetails     = ($this->getConf('LEADTRACKER_SHOW_DETAILS', '1') == '1');
 		$renderer->lifecycleStatus = $resolver->projectStatus;

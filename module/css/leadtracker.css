@@ -112,10 +112,6 @@
 .leadtracker-link.leadtracker-done {
 	cursor: pointer;
 }
-.leadtracker-link.leadtracker-done .leadtracker-label::after {
-	content: " \2197"; /* ↗ — "view" vs → "act" */
-	opacity: 0.45;
-}
 .leadtracker-link.leadtracker-done:hover .leadtracker-circle {
 	filter: brightness(1.06);
 	box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);

@@ -66,6 +66,9 @@ class LeadProgressResolver
 	/** @var array  Lang key describing what happened, per condition_type (e.g. "Called on %s") */
 	public $evidenceDoneKeys = array();
 
+	/** @var array  Rowid/id of the earliest qualifying record per condition_type */
+	public $evidenceIds = array();
+
 	/**
 	 *  @param  DoliDB  $db
 	 */
@@ -169,6 +172,7 @@ class LeadProgressResolver
 				'conditions'     => $conditions,
 				'event_date'     => $event['date'],
 				'event_done_key' => $event['done_key'],
+				'event_url'      => $event['event_url'],
 			);
 		}
 
@@ -266,9 +270,11 @@ class LeadProgressResolver
 
 		$evidence = array();
 		$this->evidenceDates = array();
+		$this->evidenceIds   = array();
 		foreach ($checks as $ctype => $result) {
 			$evidence[$ctype]            = $result['found'];
 			$this->evidenceDates[$ctype] = $result['date'];
+			$this->evidenceIds[$ctype]   = $result['id'];
 		}
 		return $evidence;
 	}
@@ -307,19 +313,51 @@ class LeadProgressResolver
 	 */
 	private function stageEvent($conditions)
 	{
-		$bestDate = null;
-		$bestKey  = null;
+		$bestDate  = null;
+		$bestKey   = null;
+		$bestCtype = null;
 		foreach ($conditions as $ctype) {
 			if ($ctype === 'manual_only' || empty($this->evidence[$ctype])) {
 				continue;
 			}
 			$d = isset($this->evidenceDates[$ctype]) ? $this->evidenceDates[$ctype] : null;
 			if ($d !== null && ($bestDate === null || $d < $bestDate)) {
-				$bestDate = $d;
-				$bestKey  = isset($this->evidenceDoneKeys[$ctype]) ? $this->evidenceDoneKeys[$ctype] : null;
+				$bestDate  = $d;
+				$bestKey   = isset($this->evidenceDoneKeys[$ctype]) ? $this->evidenceDoneKeys[$ctype] : null;
+				$bestCtype = $ctype;
 			}
 		}
-		return array('date' => $bestDate, 'done_key' => $bestKey);
+		$eventUrl = '';
+		if ($bestCtype !== null) {
+			$id       = isset($this->evidenceIds[$bestCtype]) ? $this->evidenceIds[$bestCtype] : null;
+			$eventUrl = $this->eventUrl($bestCtype, $id);
+		}
+		return array('date' => $bestDate, 'done_key' => $bestKey, 'event_url' => $eventUrl);
+	}
+
+	/**
+	 *  Build a view URL for the record that satisfied a condition.
+	 *
+	 *  @param  string    $ctype  Condition type
+	 *  @param  int|null  $id     Record rowid / actioncomm id
+	 *  @return string             URL or empty string
+	 */
+	private function eventUrl($ctype, $id)
+	{
+		if (!$id) {
+			return '';
+		}
+		$map = array(
+			'has_outbound_contact' => '/comm/action/card.php?id=',
+			'has_proposal'         => '/comm/propal/card.php?id=',
+			'has_signed_proposal'  => '/comm/propal/card.php?id=',
+			'has_order'            => '/commande/card.php?id=',
+			'has_invoice'          => '/compta/facture/card.php?id=',
+		);
+		if (!isset($map[$ctype])) {
+			return '';
+		}
+		return DOL_URL_ROOT.$map[$ctype].(int) $id;
 	}
 
 	/**
@@ -352,7 +390,7 @@ class LeadProgressResolver
 	 *  "create event on send" agenda option is enabled from a project card).
 	 *
 	 *  @param  int  $projectId
-	 *  @return array  ['found' => bool, 'date' => int|null, 'donekey' => string|null]
+	 *  @return array  ['found' => bool, 'date' => int|null, 'donekey' => string|null, 'id' => int|null]
 	 */
 	private function checkContact($projectId)
 	{
@@ -376,8 +414,9 @@ class LeadProgressResolver
 		// event (code LIKE '%SENTBYMAIL') or a manually logged call/meeting/email/fax.
 		// datec (when the event was logged) is the reliable marker — datep (planned
 		// date) is frequently left blank by users, so it makes a poor milestone date.
-		// Fetch the earliest qualifying event so we can also report its method (code).
-		$sql = "SELECT a.code, a.datec as firstdate"
+		// Fetch the earliest qualifying event so we can also report its method (code)
+		// and link back to it. NULL dates sorted last so a dated record wins.
+		$sql = "SELECT a.id, a.code, a.datec as firstdate"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
 			." LEFT JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar"
 			."  ON ar.fk_actioncomm = a.id AND ar.element_type = 'project' AND ar.fk_element = ".$pid
@@ -389,18 +428,23 @@ class LeadProgressResolver
 			."  OR p.rowid IS NOT NULL)"
 			." AND (a.code LIKE '%SENTBYMAIL' OR a.code IN ('AC_TEL', 'AC_RDV', 'AC_EMAIL', 'AC_FAX'))"
 			." AND a.entity IN (".getEntity('actioncomm').")"
-			." ORDER BY a.datec ASC";
+			." ORDER BY (a.datec IS NULL) ASC, a.datec ASC";
 		$res = $this->db->query($sql);
 		if (!$res) {
-			return array('found' => false, 'date' => null, 'donekey' => null);
+			return array('found' => false, 'date' => null, 'donekey' => null, 'id' => null);
 		}
-		// First row = earliest contact (ORDER BY datec ASC).
+		// First row = earliest contact (ORDER BY datec ASC, nulls sorted last).
 		$obj = $this->db->fetch_object($res);
 		if (!$obj) {
-			return array('found' => false, 'date' => null, 'donekey' => null);
+			return array('found' => false, 'date' => null, 'donekey' => null, 'id' => null);
 		}
 		$date = !empty($obj->firstdate) ? $this->db->jdate($obj->firstdate) : null;
-		return array('found' => true, 'date' => $date, 'donekey' => $this->contactVerbKey($obj->code));
+		return array(
+			'found'   => true,
+			'date'    => $date,
+			'donekey' => $this->contactVerbKey($obj->code),
+			'id'      => (int) $obj->id,
+		);
 	}
 
 	/**
@@ -411,7 +455,7 @@ class LeadProgressResolver
 	 *  @param  int     $projectId
 	 *  @param  int     $status       Status value
 	 *  @param  bool    $exact        True = match exactly; false = match >= status
-	 *  @return array                  ['found' => bool, 'date' => int|null] (date = earliest match)
+	 *  @return array                  ['found' => bool, 'date' => int|null, 'id' => int|null]
 	 */
 	private function checkLinkedDoc($table, $projectId, $status, $exact = false)
 	{
@@ -421,28 +465,30 @@ class LeadProgressResolver
 		$pid      = (int) $projectId;
 		$tEsc     = $this->db->escape($table);
 		$statusOp = $exact ? " = ".$status : " >= ".$status;
+		// date_valid is the system-recorded validation timestamp. NULL dates sorted
+		// last so a properly validated record always wins over one missing a date.
+		$dateExpr = "COALESCE(date_valid, datec)";
+		$orderBy  = " ORDER BY (".$dateExpr." IS NULL) ASC, ".$dateExpr." ASC, rowid ASC LIMIT 1";
 
 		$found = false;
 		$date  = null;
+		$id    = null;
 
-		// date_valid (validation timestamp) is the milestone marker — it is set by
-		// the system when the document is validated, so it is reliable. datec is only
-		// a fallback for the rare validated row missing a validation date.
-		$dateExpr = "COALESCE(date_valid, datec)";
-
-		// Method 1: direct fk_projet column.
-		$sql1 = "SELECT COUNT(rowid) as cnt, MIN(".$dateExpr.") as firstdate FROM ".$dbTable
+		// Method 1: direct fk_projet column — fetch the single earliest row.
+		$sql1 = "SELECT rowid, ".$dateExpr." as evdate FROM ".$dbTable
 			." WHERE fk_projet = ".$pid
 			." AND fk_statut".$statusOp
-			." AND entity IN (".getEntity($table).")";
+			." AND entity IN (".getEntity($table).")".$orderBy;
 		$res = $this->db->query($sql1);
-		if ($res && ($obj = $this->db->fetch_object($res)) && (int) $obj->cnt > 0) {
+		if ($res && ($obj = $this->db->fetch_object($res))) {
 			$found = true;
-			$date  = $this->minDate($date, $obj->firstdate);
+			$ts    = !empty($obj->evdate) ? $this->db->jdate($obj->evdate) : null;
+			$date  = $ts;
+			$id    = (int) $obj->rowid;
 		}
 
 		// Method 2: element_element links added after document creation.
-		$sql2 = "SELECT COUNT(d.rowid) as cnt, MIN(COALESCE(d.date_valid, d.datec)) as firstdate"
+		$sql2 = "SELECT d.rowid, COALESCE(d.date_valid, d.datec) as evdate"
 			." FROM ".$dbTable." d"
 			." INNER JOIN ".$eeTable." ee ON ("
 			."  (ee.fk_source = ".$pid." AND ee.sourcetype = 'project'"
@@ -452,14 +498,23 @@ class LeadProgressResolver
 			."   AND ee.fk_source = d.rowid AND ee.sourcetype = '".$tEsc."')"
 			." )"
 			." WHERE d.fk_statut".$statusOp
-			." AND d.entity IN (".getEntity($table).")";
+			." AND d.entity IN (".getEntity($table).")"
+			." ORDER BY (COALESCE(d.date_valid, d.datec) IS NULL) ASC,"
+			." COALESCE(d.date_valid, d.datec) ASC, d.rowid ASC LIMIT 1";
 		$res2 = $this->db->query($sql2);
-		if ($res2 && ($obj2 = $this->db->fetch_object($res2)) && (int) $obj2->cnt > 0) {
+		if ($res2 && ($obj2 = $this->db->fetch_object($res2))) {
 			$found = true;
-			$date  = $this->minDate($date, $obj2->firstdate);
+			$ts2   = !empty($obj2->evdate) ? $this->db->jdate($obj2->evdate) : null;
+			// Keep whichever record has the earlier (or only) date.
+			if ($ts2 !== null && ($date === null || $ts2 < $date)) {
+				$date = $ts2;
+				$id   = (int) $obj2->rowid;
+			} elseif ($date === null && $id === null) {
+				$id = (int) $obj2->rowid;
+			}
 		}
 
-		return array('found' => $found, 'date' => $date);
+		return array('found' => $found, 'date' => $date, 'id' => $id);
 	}
 
 	/**

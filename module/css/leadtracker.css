@@ -108,6 +108,15 @@
 	text-decoration: underline;
 }
 
+/* Done links (view the record that completed the stage) — subtle, no arrow. */
+.leadtracker-link.leadtracker-done {
+	cursor: pointer;
+}
+.leadtracker-link.leadtracker-done:hover .leadtracker-circle {
+	filter: brightness(1.06);
+	box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
 /* Action links (proceed with the next native step) get a clearer affordance. */
 .leadtracker-link.leadtracker-action {
 	cursor: pointer;

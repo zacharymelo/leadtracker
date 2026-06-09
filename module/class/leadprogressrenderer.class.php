@@ -147,9 +147,20 @@ class LeadProgressRenderer
 			&& !empty($step['action_url'])
 			&& $this->userCanProject($user);
 
+		$isDone = in_array($state, array(
+				LeadProgressResolver::STATE_COMPLETE,
+				LeadProgressResolver::STATE_WON,
+			))
+			&& $this->clickable
+			&& !empty($step['event_url'])
+			&& $this->userCanProject($user);
+
 		if ($isActionable) {
 			$href = $step['action_url'];
 			$linkClass .= ' leadtracker-action';
+		} elseif ($isDone) {
+			$href = $step['event_url'];
+			$linkClass .= ' leadtracker-done';
 		}
 
 		$canLink = ($href !== '');

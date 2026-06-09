@@ -12,6 +12,16 @@ LeadtrackerNotApplicable = Non applicable
 LeadtrackerStatusDraft = Brouillon
 LeadtrackerStatusClosed = Clôturé
 
+# Sous-titres et infobulles des étapes
+LeadtrackerTipCompleted = Terminée
+LeadtrackerTipCompletedOn = Terminée le %s
+LeadtrackerTipCurrent = Étape courante — en cours
+LeadtrackerTipCurrentNeeds = Étape courante. Pour avancer : %s
+LeadtrackerTipNeeds = Pour avancer : %s
+LeadtrackerTipManual = Avance manuellement (aucun déclencheur automatique)
+LeadtrackerTipWon = Affaire gagnée
+LeadtrackerTipLost = Affaire perdue
+
 # Page de configuration
 LeadtrackerSetup = Configuration du Lead Tracker
 LeadtrackerSetupPage = Configurez les conditions d'avancement automatique, le filtre d'opportunités et les options d'affichage.
@@ -70,6 +80,8 @@ LeadtrackerDisplayMode = Mode d'affichage
 LeadtrackerDisplayModeFull = Complet (cercles et libellés)
 LeadtrackerDisplayModeCompact = Compact (cercles uniquement)
 LeadtrackerActionLinks = Afficher le lien d'action sur l'étape courante
+LeadtrackerShowDetails = Dates et infobulles des étapes
+LeadtrackerShowDetailsHelp = Afficher la date à laquelle chaque étape a été atteinte en sous-titre, ainsi qu'une infobulle expliquant ce qu'il manque pour avancer.
 LeadtrackerDebug = Sortie de débogage
 LeadtrackerDebugHelp = Visible pour les administrateurs uniquement.
 

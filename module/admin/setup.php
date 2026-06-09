@@ -146,7 +146,7 @@ if ($action == 'update') {
 	}
 
 	// --- Display ---
-	$boolKeys = array('LEADTRACKER_CLICKABLE', 'LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_DEBUG');
+	$boolKeys = array('LEADTRACKER_CLICKABLE', 'LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_SHOW_DETAILS', 'LEADTRACKER_DEBUG');
 	foreach ($boolKeys as $key) {
 		$val = GETPOST($key, 'alpha') ? '1' : '0';
 		if (dolibarr_set_const($db, $key, $val, 'chaine', 0, '', $conf->entity) < 0) {
@@ -383,6 +383,10 @@ print '</td></tr>';
 
 print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerActionLinks").'</td><td>';
 print '<input type="checkbox" name="LEADTRACKER_ACTION_LINKS" value="1"'.(getDolGlobalString('LEADTRACKER_ACTION_LINKS', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerShowDetails").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerShowDetailsHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_SHOW_DETAILS" value="1"'.(getDolGlobalString('LEADTRACKER_SHOW_DETAILS', '1') ? ' checked' : '').'>';
 print '</td></tr>';
 
 print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDebug").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDebugHelp").'</span></td><td>';

@@ -155,6 +155,7 @@ class ActionsLeadtracker
 		$renderer->hideSkipped     = ($this->getConf('LEADTRACKER_SKIPPED_BEHAVIOR', 'show') === 'hide');
 		$renderer->clickable       = ($this->getConf('LEADTRACKER_CLICKABLE', '1') == '1');
 		$renderer->actionLinks     = ($this->getConf('LEADTRACKER_ACTION_LINKS', '1') == '1');
+		$renderer->showDetails     = ($this->getConf('LEADTRACKER_SHOW_DETAILS', '1') == '1');
 		$renderer->lifecycleStatus = $resolver->projectStatus;
 
 		$autoSync = $this->getAutoSync((int) $object->id);
@@ -279,7 +280,11 @@ class ActionsLeadtracker
 		if (!empty($resolver->evidence)) {
 			$parts = array();
 			foreach ($resolver->evidence as $k => $v) {
-				$parts[] = dol_escape_htmltag($k).': '.($v ? '<b>yes</b>' : 'no');
+				$when = '';
+				if ($v && !empty($resolver->evidenceDates[$k])) {
+					$when = ' ('.dol_print_date((int) $resolver->evidenceDates[$k], 'day').')';
+				}
+				$parts[] = dol_escape_htmltag($k).': '.($v ? '<b>yes</b>'.dol_escape_htmltag($when) : 'no');
 			}
 			$out .= '<em>evidence:</em> '.implode(' &nbsp;|&nbsp; ', $parts).'<br>';
 		}

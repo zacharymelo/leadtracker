@@ -60,6 +60,9 @@ class LeadProgressResolver
 	/** @var array  Evidence flags keyed by condition_type — exposed for debug panel */
 	public $evidence = array();
 
+	/** @var array  Unix timestamp each condition_type was met (null if unmet/undated) */
+	public $evidenceDates = array();
+
 	/**
 	 *  @param  DoliDB  $db
 	 */
@@ -151,12 +154,16 @@ class LeadProgressResolver
 				$label = $stage->label;
 			}
 
+			$conditions = isset($stageConfigs[$rowid]) ? $stageConfigs[$rowid] : array();
+
 			$steps[] = array(
 				'key'        => $stage->code,
 				'label'      => $label,
 				'state'      => $state,
 				'rowid'      => $rowid,
 				'action_url' => $this->actionUrl($stage->code, (int) $project->id),
+				'conditions' => $conditions,
+				'event_date' => $this->stageEventDate($conditions),
 			);
 		}
 
@@ -223,20 +230,53 @@ class LeadProgressResolver
 	}
 
 	/**
-	 *  Gather live evidence flags for all condition types.
+	 *  Gather live evidence flags for all condition types. Each check also reports
+	 *  the date the condition was first met, captured into $this->evidenceDates so
+	 *  the tracker can show "when did we reach this stage" subtitles.
 	 *
 	 *  @param  int  $projectId
 	 *  @return array  Map of condition_type => bool
 	 */
 	private function gatherEvidence($projectId)
 	{
-		return array(
+		$checks = array(
 			'has_outbound_contact' => $this->checkContact($projectId),
 			'has_proposal'         => $this->checkLinkedDoc('propal', $projectId, 1),
 			'has_signed_proposal'  => $this->checkLinkedDoc('propal', $projectId, 2, true),
 			'has_order'            => $this->checkLinkedDoc('commande', $projectId, 1),
 			'has_invoice'          => $this->checkLinkedDoc('facture', $projectId, 1),
 		);
+
+		$evidence = array();
+		$this->evidenceDates = array();
+		foreach ($checks as $ctype => $result) {
+			$evidence[$ctype]            = $result['found'];
+			$this->evidenceDates[$ctype] = $result['date'];
+		}
+		return $evidence;
+	}
+
+	/**
+	 *  Earliest date among a stage's met conditions — i.e. when the stage was
+	 *  first reached. A stage advances on OR logic, so the first satisfied
+	 *  condition marks the milestone. 'manual_only' carries no date.
+	 *
+	 *  @param  array  $conditions  Condition types configured for the stage
+	 *  @return int|null             Unix timestamp, or null if none dated
+	 */
+	private function stageEventDate($conditions)
+	{
+		$best = null;
+		foreach ($conditions as $ctype) {
+			if ($ctype === 'manual_only' || empty($this->evidence[$ctype])) {
+				continue;
+			}
+			$d = isset($this->evidenceDates[$ctype]) ? $this->evidenceDates[$ctype] : null;
+			if ($d !== null && ($best === null || $d < $best)) {
+				$best = $d;
+			}
+		}
+		return $best;
 	}
 
 	/**
@@ -269,7 +309,7 @@ class LeadProgressResolver
 	 *  "create event on send" agenda option is enabled from a project card).
 	 *
 	 *  @param  int  $projectId
-	 *  @return bool
+	 *  @return array  ['found' => bool, 'date' => int|null] (date = first logged contact)
 	 */
 	private function checkContact($projectId)
 	{
@@ -291,7 +331,9 @@ class LeadProgressResolver
 		// NOT contact. There is no `type` column to filter them out, so we use a
 		// positive code allowlist instead: real outbound contact is an email-send
 		// event (code LIKE '%SENTBYMAIL') or a manually logged call/meeting/email/fax.
-		$sql = "SELECT COUNT(a.id) as cnt"
+		// datec (when the event was logged) is the reliable marker — datep (planned
+		// date) is frequently left blank by users, so it makes a poor milestone date.
+		$sql = "SELECT COUNT(a.id) as cnt, MIN(a.datec) as firstdate"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
 			." LEFT JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar"
 			."  ON ar.fk_actioncomm = a.id AND ar.element_type = 'project' AND ar.fk_element = ".$pid
@@ -305,10 +347,12 @@ class LeadProgressResolver
 			." AND a.entity IN (".getEntity('actioncomm').")";
 		$res = $this->db->query($sql);
 		if (!$res) {
-			return false;
+			return array('found' => false, 'date' => null);
 		}
-		$obj = $this->db->fetch_object($res);
-		return $obj && (int) $obj->cnt > 0;
+		$obj   = $this->db->fetch_object($res);
+		$found = $obj && (int) $obj->cnt > 0;
+		$date  = ($found && !empty($obj->firstdate)) ? $this->db->jdate($obj->firstdate) : null;
+		return array('found' => $found, 'date' => $date);
 	}
 
 	/**
@@ -319,7 +363,7 @@ class LeadProgressResolver
 	 *  @param  int     $projectId
 	 *  @param  int     $status       Status value
 	 *  @param  bool    $exact        True = match exactly; false = match >= status
-	 *  @return bool
+	 *  @return array                  ['found' => bool, 'date' => int|null] (date = earliest match)
 	 */
 	private function checkLinkedDoc($table, $projectId, $status, $exact = false)
 	{
@@ -330,21 +374,27 @@ class LeadProgressResolver
 		$tEsc     = $this->db->escape($table);
 		$statusOp = $exact ? " = ".$status : " >= ".$status;
 
+		$found = false;
+		$date  = null;
+
+		// date_valid (validation timestamp) is the milestone marker — it is set by
+		// the system when the document is validated, so it is reliable. datec is only
+		// a fallback for the rare validated row missing a validation date.
+		$dateExpr = "COALESCE(date_valid, datec)";
+
 		// Method 1: direct fk_projet column.
-		$sql1 = "SELECT COUNT(rowid) as cnt FROM ".$dbTable
+		$sql1 = "SELECT COUNT(rowid) as cnt, MIN(".$dateExpr.") as firstdate FROM ".$dbTable
 			." WHERE fk_projet = ".$pid
 			." AND fk_statut".$statusOp
 			." AND entity IN (".getEntity($table).")";
 		$res = $this->db->query($sql1);
-		if ($res) {
-			$obj = $this->db->fetch_object($res);
-			if ($obj && (int) $obj->cnt > 0) {
-				return true;
-			}
+		if ($res && ($obj = $this->db->fetch_object($res)) && (int) $obj->cnt > 0) {
+			$found = true;
+			$date  = $this->minDate($date, $obj->firstdate);
 		}
 
 		// Method 2: element_element links added after document creation.
-		$sql2 = "SELECT COUNT(d.rowid) as cnt"
+		$sql2 = "SELECT COUNT(d.rowid) as cnt, MIN(COALESCE(d.date_valid, d.datec)) as firstdate"
 			." FROM ".$dbTable." d"
 			." INNER JOIN ".$eeTable." ee ON ("
 			."  (ee.fk_source = ".$pid." AND ee.sourcetype = 'project'"
@@ -356,14 +406,31 @@ class LeadProgressResolver
 			." WHERE d.fk_statut".$statusOp
 			." AND d.entity IN (".getEntity($table).")";
 		$res2 = $this->db->query($sql2);
-		if ($res2) {
-			$obj2 = $this->db->fetch_object($res2);
-			if ($obj2 && (int) $obj2->cnt > 0) {
-				return true;
-			}
+		if ($res2 && ($obj2 = $this->db->fetch_object($res2)) && (int) $obj2->cnt > 0) {
+			$found = true;
+			$date  = $this->minDate($date, $obj2->firstdate);
 		}
 
-		return false;
+		return array('found' => $found, 'date' => $date);
+	}
+
+	/**
+	 *  Reduce a running-minimum timestamp against a raw DB datetime.
+	 *
+	 *  @param  int|null     $current  Current minimum (unix ts) or null
+	 *  @param  string|null  $rawDate  DB datetime string (may be empty/null)
+	 *  @return int|null                New minimum
+	 */
+	private function minDate($current, $rawDate)
+	{
+		if (empty($rawDate)) {
+			return $current;
+		}
+		$ts = $this->db->jdate($rawDate);
+		if ($ts === null || $ts === '') {
+			return $current;
+		}
+		return ($current === null || $ts < $current) ? $ts : $current;
 	}
 
 	/**

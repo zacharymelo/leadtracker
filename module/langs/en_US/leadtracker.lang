@@ -12,6 +12,16 @@ LeadtrackerNotApplicable = Not applicable
 LeadtrackerStatusDraft = Draft
 LeadtrackerStatusClosed = Closed
 
+# Stage subtitles & tooltips
+LeadtrackerTipCompleted = Completed
+LeadtrackerTipCompletedOn = Completed %s
+LeadtrackerTipCurrent = Current stage — in progress
+LeadtrackerTipCurrentNeeds = Current stage. To advance: %s
+LeadtrackerTipNeeds = To advance: %s
+LeadtrackerTipManual = Advances manually (no automatic trigger)
+LeadtrackerTipWon = Deal won
+LeadtrackerTipLost = Deal lost
+
 # Setup page
 LeadtrackerSetup = Lead Tracker setup
 LeadtrackerSetupPage = Configure auto-advance conditions, the opportunity filter, and display options.
@@ -70,6 +80,8 @@ LeadtrackerDisplayMode = Display mode
 LeadtrackerDisplayModeFull = Full (circles and labels)
 LeadtrackerDisplayModeCompact = Compact (circles only)
 LeadtrackerActionLinks = Show action link on current stage
+LeadtrackerShowDetails = Stage dates & tooltips
+LeadtrackerShowDetailsHelp = Show the date each stage was reached as a subtitle, plus a hover tooltip explaining what each stage needs to advance.
 LeadtrackerDebug = Debug output
 LeadtrackerDebugHelp = Visible to administrators only.
 

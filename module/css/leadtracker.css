@@ -85,6 +85,23 @@
 	word-wrap: break-word;
 }
 
+/* Date subtitle beneath the label — quiet, secondary information. */
+.leadtracker-subtitle {
+	display: block;
+	margin-top: 3px;
+	font-size: 10px;
+	line-height: 1.2;
+	color: var(--colortextlink, #888);
+	opacity: 0.85;
+	max-width: 110px;
+	overflow-wrap: break-word;
+}
+
+/* A step carrying a tooltip hints it is hoverable (action steps keep pointer). */
+.leadtracker-step[title] {
+	cursor: help;
+}
+
 /* Links should not look like default underlined anchors. */
 .leadtracker-link {
 	text-decoration: none;
@@ -194,7 +211,8 @@
 .leadtracker-tracker.leadtracker-compact {
 	padding: 8px 6px;
 }
-.leadtracker-tracker.leadtracker-compact .leadtracker-label {
+.leadtracker-tracker.leadtracker-compact .leadtracker-label,
+.leadtracker-tracker.leadtracker-compact .leadtracker-subtitle {
 	display: none;
 }
 .leadtracker-tracker.leadtracker-compact .leadtracker-step {

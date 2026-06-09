@@ -41,6 +41,9 @@ class LeadProgressRenderer
 	/** @var bool Show action link on the current stage */
 	public $actionLinks = true;
 
+	/** @var bool Show per-stage date subtitles and hover tooltips */
+	public $showDetails = true;
+
 	/** @var int|null Native project lifecycle status (0 draft, 1 validated, 2 closed) */
 	public $lifecycleStatus = null;
 
@@ -123,7 +126,12 @@ class LeadProgressRenderer
 		));
 		$connectorClass = ($donePrev && $doneSelf) ? ' leadtracker-connector-complete' : '';
 
-		$out = '<div class="leadtracker-step '.$stateClass.'" role="listitem">';
+		$tooltip  = $this->showDetails ? $this->stepTooltip($step, $state) : '';
+		$titleAttr = ($tooltip !== '')
+			? ' title="'.dol_escape_htmltag($tooltip).'"'
+			: '';
+
+		$out = '<div class="leadtracker-step '.$stateClass.'" role="listitem"'.$titleAttr.'>';
 
 		if ($withConnector) {
 			$out .= '<span class="leadtracker-connector'.$connectorClass.'" aria-hidden="true"></span>';
@@ -152,6 +160,13 @@ class LeadProgressRenderer
 		$out .= '<span class="leadtracker-circle" aria-hidden="true">'.$circleInner.'</span>';
 		$out .= '<span class="leadtracker-label">'.dol_escape_htmltag($step['label']).'</span>';
 
+		if ($this->showDetails) {
+			$subtitle = $this->stepSubtitle($step, $state);
+			if ($subtitle !== '') {
+				$out .= '<span class="leadtracker-subtitle">'.dol_escape_htmltag($subtitle).'</span>';
+			}
+		}
+
 		if ($canLink) {
 			$out .= '</a>';
 		}
@@ -159,6 +174,94 @@ class LeadProgressRenderer
 		$out .= '</div>';
 
 		return $out;
+	}
+
+	/**
+	 *  Compact subtitle shown beneath a stage label — the date the stage was
+	 *  reached. Only reached stages (complete / current / won) carry a date.
+	 *
+	 *  @param  array   $step
+	 *  @param  string  $state
+	 *  @return string   Localized short date, or '' when none applies
+	 */
+	private function stepSubtitle($step, $state)
+	{
+		$reached = in_array($state, array(
+			LeadProgressResolver::STATE_COMPLETE,
+			LeadProgressResolver::STATE_CURRENT,
+			LeadProgressResolver::STATE_WON,
+		));
+		if (!$reached || empty($step['event_date'])) {
+			return '';
+		}
+		return dol_print_date((int) $step['event_date'], 'day');
+	}
+
+	/**
+	 *  Hover tooltip describing the stage: when it completed, that it is in
+	 *  progress, or what is still required to advance into it.
+	 *
+	 *  @param  array   $step
+	 *  @param  string  $state
+	 *  @return string   Plain text (escaped by the caller)
+	 */
+	private function stepTooltip($step, $state)
+	{
+		global $langs;
+
+		$date  = !empty($step['event_date']) ? dol_print_date((int) $step['event_date'], 'day') : '';
+		$needs = $this->conditionLabels($step);
+
+		switch ($state) {
+			case LeadProgressResolver::STATE_WON:
+				return $langs->trans('LeadtrackerTipWon');
+			case LeadProgressResolver::STATE_LOST:
+				return $langs->trans('LeadtrackerTipLost');
+			case LeadProgressResolver::STATE_COMPLETE:
+				return ($date !== '')
+					? $langs->trans('LeadtrackerTipCompletedOn', $date)
+					: $langs->trans('LeadtrackerTipCompleted');
+			case LeadProgressResolver::STATE_CURRENT:
+				return ($needs !== '')
+					? $langs->trans('LeadtrackerTipCurrentNeeds', $needs)
+					: $langs->trans('LeadtrackerTipCurrent');
+			default: // pending
+				return ($needs !== '')
+					? $langs->trans('LeadtrackerTipNeeds', $needs)
+					: $langs->trans('LeadtrackerTipManual');
+		}
+	}
+
+	/**
+	 *  Human-readable, comma-joined list of the conditions a stage needs to
+	 *  advance. 'manual_only' is dropped — it has its own tooltip wording.
+	 *
+	 *  @param  array  $step
+	 *  @return string
+	 */
+	private function conditionLabels($step)
+	{
+		global $langs;
+
+		if (empty($step['conditions']) || !is_array($step['conditions'])) {
+			return '';
+		}
+
+		$map = array(
+			'has_outbound_contact' => 'LeadtrackerConditionHasContact',
+			'has_proposal'         => 'LeadtrackerConditionHasProposal',
+			'has_signed_proposal'  => 'LeadtrackerConditionHasSignedProposal',
+			'has_order'            => 'LeadtrackerConditionHasOrder',
+			'has_invoice'          => 'LeadtrackerConditionHasInvoice',
+		);
+
+		$labels = array();
+		foreach ($step['conditions'] as $ctype) {
+			if (isset($map[$ctype])) {
+				$labels[] = $langs->trans($map[$ctype]);
+			}
+		}
+		return implode(', ', $labels);
 	}
 
 	/**

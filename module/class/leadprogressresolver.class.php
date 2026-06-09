@@ -63,6 +63,9 @@ class LeadProgressResolver
 	/** @var array  Unix timestamp each condition_type was met (null if unmet/undated) */
 	public $evidenceDates = array();
 
+	/** @var array  Lang key describing what happened, per condition_type (e.g. "Called on %s") */
+	public $evidenceDoneKeys = array();
+
 	/**
 	 *  @param  DoliDB  $db
 	 */
@@ -155,15 +158,17 @@ class LeadProgressResolver
 			}
 
 			$conditions = isset($stageConfigs[$rowid]) ? $stageConfigs[$rowid] : array();
+			$event      = $this->stageEvent($conditions);
 
 			$steps[] = array(
-				'key'        => $stage->code,
-				'label'      => $label,
-				'state'      => $state,
-				'rowid'      => $rowid,
-				'action_url' => $this->actionUrl($stage->code, (int) $project->id),
-				'conditions' => $conditions,
-				'event_date' => $this->stageEventDate($conditions),
+				'key'            => $stage->code,
+				'label'          => $label,
+				'state'          => $state,
+				'rowid'          => $rowid,
+				'action_url'     => $this->actionUrl($stage->code, (int) $project->id),
+				'conditions'     => $conditions,
+				'event_date'     => $event['date'],
+				'event_done_key' => $event['done_key'],
 			);
 		}
 
@@ -239,12 +244,24 @@ class LeadProgressResolver
 	 */
 	private function gatherEvidence($projectId)
 	{
+		$contact = $this->checkContact($projectId);
+
 		$checks = array(
-			'has_outbound_contact' => $this->checkContact($projectId),
+			'has_outbound_contact' => $contact,
 			'has_proposal'         => $this->checkLinkedDoc('propal', $projectId, 1),
 			'has_signed_proposal'  => $this->checkLinkedDoc('propal', $projectId, 2, true),
 			'has_order'            => $this->checkLinkedDoc('commande', $projectId, 1),
 			'has_invoice'          => $this->checkLinkedDoc('facture', $projectId, 1),
+		);
+
+		// Per-condition phrasing for the "what happened" tooltip. Contact is dynamic
+		// (the actual method — call / email / meeting); documents are fixed.
+		$this->evidenceDoneKeys = array(
+			'has_outbound_contact' => $contact['donekey'],
+			'has_proposal'         => 'LeadtrackerDoneProposal',
+			'has_signed_proposal'  => 'LeadtrackerDoneSigned',
+			'has_order'            => 'LeadtrackerDoneOrder',
+			'has_invoice'          => 'LeadtrackerDoneInvoice',
 		);
 
 		$evidence = array();
@@ -257,26 +274,52 @@ class LeadProgressResolver
 	}
 
 	/**
-	 *  Earliest date among a stage's met conditions — i.e. when the stage was
-	 *  first reached. A stage advances on OR logic, so the first satisfied
-	 *  condition marks the milestone. 'manual_only' carries no date.
+	 *  Map an actioncomm code to the lang key describing the contact method.
+	 *
+	 *  @param  string  $code  actioncomm.code (e.g. AC_TEL, AC_RDV, *SENTBYMAIL)
+	 *  @return string          Lang key ("Called on %s", "Emailed on %s", ...)
+	 */
+	private function contactVerbKey($code)
+	{
+		$code = (string) $code;
+		if ($code === 'AC_TEL') {
+			return 'LeadtrackerDoneCall';
+		}
+		if ($code === 'AC_RDV') {
+			return 'LeadtrackerDoneMeeting';
+		}
+		if ($code === 'AC_FAX') {
+			return 'LeadtrackerDoneFax';
+		}
+		if ($code === 'AC_EMAIL' || strpos($code, 'SENTBYMAIL') !== false) {
+			return 'LeadtrackerDoneEmail';
+		}
+		return 'LeadtrackerDoneContact';
+	}
+
+	/**
+	 *  Earliest dated event among a stage's met conditions — i.e. when, and how,
+	 *  the stage was first reached. A stage advances on OR logic, so the first
+	 *  satisfied condition marks the milestone. 'manual_only' carries no date.
 	 *
 	 *  @param  array  $conditions  Condition types configured for the stage
-	 *  @return int|null             Unix timestamp, or null if none dated
+	 *  @return array               ['date' => int|null, 'done_key' => string|null]
 	 */
-	private function stageEventDate($conditions)
+	private function stageEvent($conditions)
 	{
-		$best = null;
+		$bestDate = null;
+		$bestKey  = null;
 		foreach ($conditions as $ctype) {
 			if ($ctype === 'manual_only' || empty($this->evidence[$ctype])) {
 				continue;
 			}
 			$d = isset($this->evidenceDates[$ctype]) ? $this->evidenceDates[$ctype] : null;
-			if ($d !== null && ($best === null || $d < $best)) {
-				$best = $d;
+			if ($d !== null && ($bestDate === null || $d < $bestDate)) {
+				$bestDate = $d;
+				$bestKey  = isset($this->evidenceDoneKeys[$ctype]) ? $this->evidenceDoneKeys[$ctype] : null;
 			}
 		}
-		return $best;
+		return array('date' => $bestDate, 'done_key' => $bestKey);
 	}
 
 	/**
@@ -309,7 +352,7 @@ class LeadProgressResolver
 	 *  "create event on send" agenda option is enabled from a project card).
 	 *
 	 *  @param  int  $projectId
-	 *  @return array  ['found' => bool, 'date' => int|null] (date = first logged contact)
+	 *  @return array  ['found' => bool, 'date' => int|null, 'donekey' => string|null]
 	 */
 	private function checkContact($projectId)
 	{
@@ -333,7 +376,8 @@ class LeadProgressResolver
 		// event (code LIKE '%SENTBYMAIL') or a manually logged call/meeting/email/fax.
 		// datec (when the event was logged) is the reliable marker — datep (planned
 		// date) is frequently left blank by users, so it makes a poor milestone date.
-		$sql = "SELECT COUNT(a.id) as cnt, MIN(a.datec) as firstdate"
+		// Fetch the earliest qualifying event so we can also report its method (code).
+		$sql = "SELECT a.code, a.datec as firstdate"
 			." FROM ".MAIN_DB_PREFIX."actioncomm a"
 			." LEFT JOIN ".MAIN_DB_PREFIX."actioncomm_resources ar"
 			."  ON ar.fk_actioncomm = a.id AND ar.element_type = 'project' AND ar.fk_element = ".$pid
@@ -344,15 +388,19 @@ class LeadProgressResolver
 			."  OR ar.rowid IS NOT NULL"
 			."  OR p.rowid IS NOT NULL)"
 			." AND (a.code LIKE '%SENTBYMAIL' OR a.code IN ('AC_TEL', 'AC_RDV', 'AC_EMAIL', 'AC_FAX'))"
-			." AND a.entity IN (".getEntity('actioncomm').")";
+			." AND a.entity IN (".getEntity('actioncomm').")"
+			." ORDER BY a.datec ASC";
 		$res = $this->db->query($sql);
 		if (!$res) {
-			return array('found' => false, 'date' => null);
+			return array('found' => false, 'date' => null, 'donekey' => null);
 		}
-		$obj   = $this->db->fetch_object($res);
-		$found = $obj && (int) $obj->cnt > 0;
-		$date  = ($found && !empty($obj->firstdate)) ? $this->db->jdate($obj->firstdate) : null;
-		return array('found' => $found, 'date' => $date);
+		// First row = earliest contact (ORDER BY datec ASC).
+		$obj = $this->db->fetch_object($res);
+		if (!$obj) {
+			return array('found' => false, 'date' => null, 'donekey' => null);
+		}
+		$date = !empty($obj->firstdate) ? $this->db->jdate($obj->firstdate) : null;
+		return array('found' => true, 'date' => $date, 'donekey' => $this->contactVerbKey($obj->code));
 	}
 
 	/**

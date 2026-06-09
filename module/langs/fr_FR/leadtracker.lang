@@ -15,6 +15,16 @@ LeadtrackerStatusClosed = Clôturé
 # Sous-titres et infobulles des étapes
 LeadtrackerTipCompleted = Terminée
 LeadtrackerTipCompletedOn = Terminée le %s
+# Formulation « ce qui s'est passé » — %s est la date
+LeadtrackerDoneContact = Contacté le %s
+LeadtrackerDoneCall = Appelé le %s
+LeadtrackerDoneMeeting = Rendez-vous le %s
+LeadtrackerDoneEmail = Courriel envoyé le %s
+LeadtrackerDoneFax = Fax envoyé le %s
+LeadtrackerDoneProposal = Proposition envoyée le %s
+LeadtrackerDoneSigned = Proposition signée le %s
+LeadtrackerDoneOrder = Commande passée le %s
+LeadtrackerDoneInvoice = Facturé le %s
 LeadtrackerTipCurrent = Étape courante — en cours
 LeadtrackerTipCurrentNeeds = Étape courante. Pour avancer : %s
 LeadtrackerTipNeeds = Pour avancer : %s

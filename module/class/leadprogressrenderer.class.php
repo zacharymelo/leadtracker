@@ -209,8 +209,9 @@ class LeadProgressRenderer
 	{
 		global $langs;
 
-		$date  = !empty($step['event_date']) ? dol_print_date((int) $step['event_date'], 'day') : '';
-		$needs = $this->conditionLabels($step);
+		$date    = !empty($step['event_date']) ? dol_print_date((int) $step['event_date'], 'day') : '';
+		$doneKey = !empty($step['event_done_key']) ? $step['event_done_key'] : '';
+		$needs   = $this->conditionLabels($step);
 
 		switch ($state) {
 			case LeadProgressResolver::STATE_WON:
@@ -218,10 +219,18 @@ class LeadProgressRenderer
 			case LeadProgressResolver::STATE_LOST:
 				return $langs->trans('LeadtrackerTipLost');
 			case LeadProgressResolver::STATE_COMPLETE:
+				// Describe what actually happened ("Called on …", "Proposal sent on …").
+				if ($date !== '' && $doneKey !== '') {
+					return $langs->trans($doneKey, $date);
+				}
 				return ($date !== '')
 					? $langs->trans('LeadtrackerTipCompletedOn', $date)
 					: $langs->trans('LeadtrackerTipCompleted');
 			case LeadProgressResolver::STATE_CURRENT:
+				// The stage is current because this evidence landed — name it.
+				if ($date !== '' && $doneKey !== '') {
+					return $langs->trans($doneKey, $date);
+				}
 				return ($needs !== '')
 					? $langs->trans('LeadtrackerTipCurrentNeeds', $needs)
 					: $langs->trans('LeadtrackerTipCurrent');

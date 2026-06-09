@@ -15,6 +15,16 @@ LeadtrackerStatusClosed = Closed
 # Stage subtitles & tooltips
 LeadtrackerTipCompleted = Completed
 LeadtrackerTipCompletedOn = Completed %s
+# "What happened" phrasing — %s is the date
+LeadtrackerDoneContact = Contacted on %s
+LeadtrackerDoneCall = Called on %s
+LeadtrackerDoneMeeting = Met on %s
+LeadtrackerDoneEmail = Emailed on %s
+LeadtrackerDoneFax = Faxed on %s
+LeadtrackerDoneProposal = Proposal sent on %s
+LeadtrackerDoneSigned = Proposal signed on %s
+LeadtrackerDoneOrder = Order placed on %s
+LeadtrackerDoneInvoice = Invoiced on %s
 LeadtrackerTipCurrent = Current stage — in progress
 LeadtrackerTipCurrentNeeds = Current stage. To advance: %s
 LeadtrackerTipNeeds = To advance: %s

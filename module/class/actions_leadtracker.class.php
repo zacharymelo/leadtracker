@@ -160,7 +160,13 @@ class ActionsLeadtracker
 
 		$autoSync = $this->getAutoSync((int) $object->id);
 
-		$url = dol_buildpath('/leadtracker/css/leadtracker.css', 1);
+		// Cache-bust the stylesheet by file mtime. Without this the browser keeps
+		// serving the stylesheet it cached under the same URL, so CSS added in a
+		// module upgrade (badge, muted funnel, subtitles) silently fails to apply.
+		$cssUrl  = dol_buildpath('/leadtracker/css/leadtracker.css', 1);
+		$cssFile = dol_buildpath('/leadtracker/css/leadtracker.css', 0);
+		$cssVer  = @filemtime($cssFile);
+		$url     = $cssUrl.($cssVer ? '?v='.$cssVer : '');
 		$out  = '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag($url).'">'."\n";
 		$out .= $this->colorOverrides();
 		$out .= '<div id="leadtracker-holder" style="display:none;">';

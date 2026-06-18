@@ -51,6 +51,10 @@ class DealGraphResolver
 	const STATE_DEAD    = 'dead';
 	const STATE_EVENT   = 'event';
 
+	/** @var array  actioncomm.elementtype values the pbxcalls module stamps on the
+	 *             agenda event it creates for a call, used to de-duplicate. */
+	private static $pbxCallLinkTypes = array('pbxcalls_call', 'call@pbxcalls');
+
 	/** @var DoliDB */
 	public $db;
 
@@ -326,6 +330,12 @@ class DealGraphResolver
 		if ($this->includeCalls && function_exists('isModEnabled') && isModEnabled('pbxcalls')) {
 			$this->attachCalls($projectId, $nodes, $edges);
 		}
+
+		// Step 3.7 — de-duplicate calls: a phone call logged both as a pbxcalls
+		// record AND as a native agenda event would otherwise show twice. Drop the
+		// agenda copy in favour of the richer pbxcalls card. Always on, independent
+		// of the "Events" switch.
+		$this->dedupeCallEvents($nodes, $edges);
 
 		// Step 4 — synthesize root edges: any spine node with no upstream spine
 		// parent attaches directly to the lead (a standalone proposal, or an order
@@ -753,6 +763,8 @@ class DealGraphResolver
 			'state'      => self::STATE_EVENT,
 			'sub'        => '',
 			'date'       => ($date !== null) ? (int) $date : null,
+			'linkType'   => isset($e->elementtype) ? (string) $e->elementtype : '',
+			'linkId'     => isset($e->fk_element) ? (int) $e->fk_element : 0,
 			'amount'     => null,
 			'url'        => DOL_URL_ROOT.'/comm/action/card.php?id='.$id,
 			'broad'      => false,
@@ -838,6 +850,67 @@ class DealGraphResolver
 			$nodes[$key] = $node;
 			$edges[] = array('from' => $rootKey, 'to' => $key, 'label' => 'LeadtrackerEdgeCall');
 		}
+	}
+
+	/**
+	 *  Drop agenda events that duplicate a richer pbxcalls card.
+	 *
+	 *  When the PBX Calls module feeds the map, one phone call surfaces twice: the
+	 *  pbxcalls record AND a native agenda event the module creates for it. pbxcalls
+	 *  stamps that event's linked object directly — actioncomm.fk_element = the call
+	 *  rowid, actioncomm.elementtype = 'pbxcalls_call' (see $pbxCallLinkTypes) — so
+	 *  the duplicate is matched by that exact id, no fuzzy time logic. The agenda
+	 *  copy is removed in favour of the pbxcalls card (direction, duration,
+	 *  disposition). The match only fires when the call card is actually present, so
+	 *  a call never vanishes when phone-call cards are turned off; agenda events not
+	 *  linked to a call are left untouched.
+	 *
+	 *  Always on, independent of the "Events" show/hide switch (which removes ALL
+	 *  agenda events regardless).
+	 *
+	 *  @param  array  &$nodes  (mutated — duplicate event nodes removed)
+	 *  @param  array  &$edges  (mutated — edges touching removed nodes pruned)
+	 *  @return void
+	 */
+	private function dedupeCallEvents(&$nodes, &$edges)
+	{
+		// pbxcalls call rowids present in the graph.
+		$callIds = array();
+		foreach ($nodes as $n) {
+			if ($n['type'] === 'call') {
+				$callIds[(int) $n['id']] = true;
+			}
+		}
+		if (empty($callIds)) {
+			return; // no pbxcalls cards → nothing to dedupe against
+		}
+
+		// An event whose linked object IS one of those calls is the duplicate.
+		$drop = array();
+		foreach ($nodes as $key => $n) {
+			if ($n['type'] !== 'event') {
+				continue;
+			}
+			$lt = isset($n['linkType']) ? $n['linkType'] : '';
+			$li = isset($n['linkId']) ? (int) $n['linkId'] : 0;
+			if ($li > 0 && isset($callIds[$li]) && in_array($lt, self::$pbxCallLinkTypes, true)) {
+				$drop[$key] = true;
+			}
+		}
+		if (empty($drop)) {
+			return;
+		}
+
+		foreach (array_keys($drop) as $key) {
+			unset($nodes[$key]);
+		}
+		$kept = array();
+		foreach ($edges as $e) {
+			if (!isset($drop[$e['from']]) && !isset($drop[$e['to']])) {
+				$kept[] = $e;
+			}
+		}
+		$edges = $kept;
 	}
 
 	/**

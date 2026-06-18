@@ -108,3 +108,79 @@ LeadtrackerAutoSyncOn = Synchro Auto On
 LeadtrackerAutoSyncOff = Synchro Auto Off
 LeadtrackerAutoSyncOnHelp = Le montant et la probabilité se recalculent automatiquement. Cliquez pour désactiver et gérer les valeurs manuellement.
 LeadtrackerAutoSyncOffHelp = Les valeurs sont verrouillées pour modification manuelle. Cliquez pour réactiver le calcul automatique depuis les documents liés.
+
+# Deal map (branching graph)
+LeadtrackerDealMap = Carte de l'affaire
+LeadtrackerDealMapLabel = Carte de l'affaire
+LeadtrackerDealMapHelp = Affiche la vue ramifiée de l'affaire : le prospect et chaque proposition, commande, facture et expédition liée.
+LeadtrackerDealLoading = Chargement de la carte…
+LeadtrackerDealEmpty = Aucun document lié pour le moment — cette affaire n'a ni proposition, ni commande, ni facture, ni expédition.
+LeadtrackerDealError = Impossible de charger la carte de l'affaire.
+LeadtrackerDrillDown = Ouvrir le suivi
+LeadtrackerMergeHelp = Lié à plusieurs documents en amont.
+LeadtrackerRefChipHelp = Affiché en entier sous son autre parent.
+# Node labels
+LeadtrackerNodeLead = Prospect
+LeadtrackerNodeProposal = Proposition
+LeadtrackerNodeOrder = Commande
+LeadtrackerNodeInvoice = Facture
+LeadtrackerNodeShipment = Expédition
+# Edge labels
+LeadtrackerEdgeOpened = ouvert sous
+LeadtrackerEdgeOrdered = commandé depuis
+LeadtrackerEdgeInvoiced = facturé
+LeadtrackerEdgeInvoicedDirect = facturé directement
+LeadtrackerEdgeShipped = expédié
+# Sub-status
+LeadtrackerSubDraft = Brouillon
+LeadtrackerSubValidated = Validé
+LeadtrackerSubInProcess = En cours
+LeadtrackerSubSigned = Signé
+LeadtrackerSubBilled = Facturé
+LeadtrackerSubRefused = Refusé
+LeadtrackerSubClosed = Clôturé
+LeadtrackerSubCancelled = Annulé
+LeadtrackerSubUnpaid = Impayé
+LeadtrackerSubPaid = Payé
+LeadtrackerSubAbandoned = Abandonné
+LeadtrackerSubProcessed = Traité
+# Legend
+LeadtrackerLegendDone = Terminé
+LeadtrackerLegendActive = En cours
+LeadtrackerLegendPending = En attente
+LeadtrackerLegendDead = Perdu / annulé
+# Setup
+LeadtrackerDealMapEnable = Afficher la carte de l'affaire
+LeadtrackerDealMapEnableHelp = Ajoute une vue ramifiée dépliable de l'affaire sous la barre de pipeline sur les fiches projet.
+LeadtrackerDealDateLayout = Classer les branches par date
+LeadtrackerDealDateLayoutHelp = Dans la carte de l'affaire, trie les documents d'un même niveau par date (du plus ancien au plus récent) et les décale verticalement pour refléter l'ordre des événements. Décochez pour une rangée plate.
+
+# Deal map — events
+LeadtrackerNodeEvent = Événement
+LeadtrackerEventCall = Appel
+LeadtrackerEventEmail = E-mail
+LeadtrackerEventMeeting = Rendez-vous
+LeadtrackerEventFax = Fax
+LeadtrackerEventOther = Événement
+LeadtrackerEdgeEvent = activité
+LeadtrackerDealEvents = Afficher les événements dans la carte de l'affaire par défaut
+LeadtrackerDealEventsHelp = Définit la position initiale de l'interrupteur « Événements » de la carte de l'affaire. Activé, les appels, e-mails et rendez-vous (rattachés au document concerné ou au prospect) sont affichés par défaut ; désactivé, ils sont masqués jusqu'à ce que l'utilisateur actionne l'interrupteur. L'interrupteur reste disponible dans tous les cas.
+LeadtrackerDealEventsToggle = Événements
+
+# Deal map — warranty & calls
+LeadtrackerNodeWarranty = Garantie
+LeadtrackerNodeRequest = Demande SAV
+LeadtrackerNodeCall = Appel
+LeadtrackerEdgeAux = lié
+LeadtrackerEdgeCall = appel
+LeadtrackerDealWarranty = Afficher les garanties
+LeadtrackerDealWarrantyHelp = Ajoute les garanties et demandes SAV à la carte de l'affaire sous forme de petites cartes, rattachées à la commande concernée. Nécessite le module Service Garantie.
+LeadtrackerDealCalls = Afficher les appels
+LeadtrackerDealCallsHelp = Ajoute les appels téléphoniques rattachés à ce projet sous forme de petites cartes sous le prospect. Nécessite le module PBX Calls.
+LeadtrackerDealCallsBroad = Inclure les appels au niveau client
+LeadtrackerDealCallsBroadHelp = Affiche aussi les appels rattachés au client de cette affaire (pas seulement ceux liés à ce projet). Les appels au niveau client sont marqués et atténués. Désactivé = uniquement les appels liés à ce projet.
+LeadtrackerCallBroadTag = client
+LeadtrackerCallBroadHelp = Rattaché au client de l'affaire, non lié à ce projet précis.
+LeadtrackerEventSms = SMS
+LeadtrackerDealBroad = Inclure la correspondance au niveau client
+LeadtrackerDealBroadHelp = Affiche aussi les appels, e-mails, SMS et rendez-vous rattachés au client de cette affaire (pas seulement les éléments liés à ce projet). Les éléments au niveau client sont marqués et atténués. Désactivé = uniquement la correspondance liée à ce projet ou à ses documents.

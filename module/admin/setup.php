@@ -146,7 +146,7 @@ if ($action == 'update') {
 	}
 
 	// --- Display ---
-	$boolKeys = array('LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_SHOW_DETAILS', 'LEADTRACKER_DEBUG');
+	$boolKeys = array('LEADTRACKER_ACTION_LINKS', 'LEADTRACKER_SHOW_DETAILS', 'LEADTRACKER_DEAL_MAP', 'LEADTRACKER_DEAL_DATE_LAYOUT', 'LEADTRACKER_DEAL_EVENTS', 'LEADTRACKER_DEAL_WARRANTY', 'LEADTRACKER_DEAL_CALLS', 'LEADTRACKER_DEAL_BROAD', 'LEADTRACKER_DEBUG');
 	foreach ($boolKeys as $key) {
 		$val = GETPOST($key, 'alpha') ? '1' : '0';
 		if (dolibarr_set_const($db, $key, $val, 'chaine', 0, '', $conf->entity) < 0) {
@@ -387,6 +387,30 @@ print '</td></tr>';
 
 print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerShowDetails").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerShowDetailsHelp").'</span></td><td>';
 print '<input type="checkbox" name="LEADTRACKER_SHOW_DETAILS" value="1"'.(getDolGlobalString('LEADTRACKER_SHOW_DETAILS', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDealMapEnable").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDealMapEnableHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEAL_MAP" value="1"'.(getDolGlobalString('LEADTRACKER_DEAL_MAP', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDealDateLayout").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDealDateLayoutHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEAL_DATE_LAYOUT" value="1"'.(getDolGlobalString('LEADTRACKER_DEAL_DATE_LAYOUT', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDealEvents").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDealEventsHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEAL_EVENTS" value="1"'.(getDolGlobalString('LEADTRACKER_DEAL_EVENTS', '0') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDealWarranty").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDealWarrantyHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEAL_WARRANTY" value="1"'.(getDolGlobalString('LEADTRACKER_DEAL_WARRANTY', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDealCalls").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDealCallsHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEAL_CALLS" value="1"'.(getDolGlobalString('LEADTRACKER_DEAL_CALLS', '1') ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDealBroad").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDealBroadHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_DEAL_BROAD" value="1"'.(getDolGlobalString('LEADTRACKER_DEAL_BROAD', '0') ? ' checked' : '').'>';
 print '</td></tr>';
 
 print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerDebug").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerDebugHelp").'</span></td><td>';

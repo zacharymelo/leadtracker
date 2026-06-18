@@ -108,3 +108,79 @@ LeadtrackerAutoSyncOn = Auto-Sync On
 LeadtrackerAutoSyncOff = Auto-Sync Off
 LeadtrackerAutoSyncOnHelp = Lead amount and probability are recalculating automatically. Click to disable and manage values manually.
 LeadtrackerAutoSyncOffHelp = Values are locked for manual editing. Click to re-enable automatic recalculation from linked documents.
+
+# Deal map (branching graph)
+LeadtrackerDealMap = Deal map
+LeadtrackerDealMapLabel = Deal map
+LeadtrackerDealMapHelp = Show the branching view of this deal: the lead and every linked proposal, order, invoice and shipment.
+LeadtrackerDealLoading = Loading deal map…
+LeadtrackerDealEmpty = No linked documents yet — this deal has no proposals, orders, invoices or shipments.
+LeadtrackerDealError = Could not load the deal map.
+LeadtrackerDrillDown = Open workflow
+LeadtrackerMergeHelp = Linked from more than one upstream document.
+LeadtrackerRefChipHelp = Shown in full under its other parent.
+# Node labels
+LeadtrackerNodeLead = Lead
+LeadtrackerNodeProposal = Proposal
+LeadtrackerNodeOrder = Order
+LeadtrackerNodeInvoice = Invoice
+LeadtrackerNodeShipment = Shipment
+# Edge labels
+LeadtrackerEdgeOpened = opened under
+LeadtrackerEdgeOrdered = ordered from
+LeadtrackerEdgeInvoiced = invoiced
+LeadtrackerEdgeInvoicedDirect = invoiced directly
+LeadtrackerEdgeShipped = shipped
+# Sub-status
+LeadtrackerSubDraft = Draft
+LeadtrackerSubValidated = Validated
+LeadtrackerSubInProcess = In process
+LeadtrackerSubSigned = Signed
+LeadtrackerSubBilled = Billed
+LeadtrackerSubRefused = Refused
+LeadtrackerSubClosed = Closed
+LeadtrackerSubCancelled = Cancelled
+LeadtrackerSubUnpaid = Unpaid
+LeadtrackerSubPaid = Paid
+LeadtrackerSubAbandoned = Abandoned
+LeadtrackerSubProcessed = Processed
+# Legend
+LeadtrackerLegendDone = Done
+LeadtrackerLegendActive = In progress
+LeadtrackerLegendPending = Pending
+LeadtrackerLegendDead = Lost / cancelled
+# Setup
+LeadtrackerDealMapEnable = Show deal map expander
+LeadtrackerDealMapEnableHelp = Adds an expandable branching view of the deal beneath the pipeline bar on project cards.
+LeadtrackerDealDateLayout = Order branches by date
+LeadtrackerDealDateLayoutHelp = In the deal map, sort sibling documents by date (earliest first) and stagger them so the order events happened reads top-to-bottom. Uncheck for a flat row.
+
+# Deal map — events
+LeadtrackerNodeEvent = Event
+LeadtrackerEventCall = Call
+LeadtrackerEventEmail = Email
+LeadtrackerEventMeeting = Meeting
+LeadtrackerEventFax = Fax
+LeadtrackerEventOther = Event
+LeadtrackerEdgeEvent = activity
+LeadtrackerDealEvents = Show events in the deal map by default
+LeadtrackerDealEventsHelp = Sets the starting position of the "Events" switch on the deal map. When on, calls, emails and meetings (hung off the document they relate to, or the lead) show by default; when off they are hidden until the viewer flips the switch. The switch is always available either way.
+LeadtrackerDealEventsToggle = Events
+
+# Deal map — warranty & calls
+LeadtrackerNodeWarranty = Warranty
+LeadtrackerNodeRequest = Service request
+LeadtrackerNodeCall = Call
+LeadtrackerEdgeAux = related
+LeadtrackerEdgeCall = call
+LeadtrackerDealWarranty = Show warranty records
+LeadtrackerDealWarrantyHelp = Add warranty claims and service requests to the deal map as small cards, hung off the order they relate to. Requires the Warranty Service module.
+LeadtrackerDealCalls = Show phone calls
+LeadtrackerDealCallsHelp = Add phone-call records tied to this project as small cards under the lead. Requires the PBX Calls module.
+LeadtrackerDealCallsBroad = Include customer-level calls
+LeadtrackerDealCallsBroadHelp = Also show calls matched to this deal's customer (not just calls tagged to this project). Customer-level calls are marked and dimmed. Off = only calls tied to this project.
+LeadtrackerCallBroadTag = customer
+LeadtrackerCallBroadHelp = Matched to the deal's customer, not tagged to this specific project.
+LeadtrackerEventSms = SMS
+LeadtrackerDealBroad = Include customer-level correspondence
+LeadtrackerDealBroadHelp = Also show calls, emails, SMS and meetings matched to this deal's customer (not just items tagged to this project). Customer-level items are marked and dimmed. Off = only correspondence tied to this project or its documents.

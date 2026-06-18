@@ -172,6 +172,11 @@ class ActionsLeadtracker
 		$out .= '<div id="leadtracker-holder" style="display:none;">';
 		$out .= '<div class="leadtracker-wrap">';
 		$out .= $renderer->render($steps, $user);
+		// Branching deal map — lazy-loaded expandable panel. View mode only.
+		if ($action !== 'edit' && $action !== 'create'
+			&& $this->getConf('LEADTRACKER_DEAL_MAP', '1') == '1') {
+			$out .= $this->dealMapPanel((int) $object->id);
+		}
 		$out .= '</div>';
 		// Only inject the toggle in view mode. In edit/create mode the card is already
 		// inside a <form>; our button would become a nested form (invalid HTML) and the
@@ -402,6 +407,95 @@ class ActionsLeadtracker
 		$out .= 'h("backurl",b.dataset.ltBack);';
 		$out .= 'document.body.appendChild(f);f.submit();';
 		$out .= '};}';
+		$out .= '</script>';
+
+		return $out;
+	}
+
+	/**
+	 *  Render the "Deal map" expander: a toggle button plus an empty panel that
+	 *  lazy-loads the branching deal graph from ajax/deal_graph.php the first time
+	 *  it is opened. The graph HTML is fetched on demand so nothing heavy runs on
+	 *  card load — only when the user actually asks to see the map.
+	 *
+	 *  @param  int  $projectId
+	 *  @return string  HTML
+	 */
+	private function dealMapPanel($projectId)
+	{
+		global $langs;
+
+		$langs->loadLangs(array('leadtracker@leadtracker'));
+
+		$ajaxUrl = dol_buildpath('/leadtracker/ajax/deal_graph.php', 1);
+		$label   = $langs->trans('LeadtrackerDealMap');
+		$loading = $langs->trans('LeadtrackerDealLoading');
+		$failed  = $langs->trans('LeadtrackerDealError');
+		$evLabel = $langs->trans('LeadtrackerDealEventsToggle');
+
+		// Default position of the per-view "Events" switch.
+		$evDefault = (getDolGlobalString('LEADTRACKER_DEAL_EVENTS', '0') == '1');
+
+		$out  = '<div class="leadtracker-dealmap">';
+		$out .= '<button type="button" class="leadtracker-dealmap-toggle"';
+		$out .= ' data-lt-url="'.dol_escape_htmltag($ajaxUrl).'"';
+		$out .= ' data-lt-pid="'.(int) $projectId.'"';
+		$out .= ' data-lt-loading="'.dol_escape_htmltag($loading).'"';
+		$out .= ' data-lt-failed="'.dol_escape_htmltag($failed).'"';
+		$out .= ' aria-expanded="false"';
+		$out .= ' onclick="leadtrackerDealMapToggle(this)">';
+		$out .= '<span class="leadtracker-dealmap-caret">&#9656;</span> ';
+		$out .= dol_escape_htmltag($label);
+		$out .= '</button>';
+
+		// Toolbar: the "Events" show/hide switch. Only meaningful once the map is
+		// open, so it stays hidden until then. Its initial state comes from the
+		// configured default; flipping it re-fetches the graph with ?events=0/1.
+		$out .= '<div class="leadtracker-dealmap-toolbar" style="display:none;">';
+		$out .= '<label class="leadtracker-dealmap-events">';
+		$out .= '<input type="checkbox" class="leadtracker-dealmap-events-cb"'.($evDefault ? ' checked' : '').' onchange="leadtrackerDealMapEvents(this)"> ';
+		$out .= dol_escape_htmltag($evLabel);
+		$out .= '</label>';
+		$out .= '</div>';
+
+		$out .= '<div class="leadtracker-dealmap-panel" style="display:none;" data-lt-loaded="0"></div>';
+		$out .= '</div>';
+
+		// Helpers — defined once per page via a window flag.
+		$out .= '<script>';
+		$out .= 'if(!window.leadtrackerDealMapToggle){';
+		// Shared (re)loader: reads the events switch and fetches the graph for it.
+		$out .= 'window.leadtrackerDealMapFetch=function(wrap){';
+		$out .= 'var panel=wrap.querySelector(".leadtracker-dealmap-panel");';
+		$out .= 'var b=wrap.querySelector(".leadtracker-dealmap-toggle");';
+		$out .= 'var cb=wrap.querySelector(".leadtracker-dealmap-events-cb");';
+		$out .= 'if(!panel||!b){return;}';
+		$out .= 'var ev=(cb&&cb.checked)?"1":"0";';
+		$out .= 'panel.innerHTML="<div class=\'dealgraph-empty\'>"+b.dataset.ltLoading+"</div>";';
+		$out .= 'var u=b.dataset.ltUrl+(b.dataset.ltUrl.indexOf("?")>-1?"&":"?")+"projectid="+encodeURIComponent(b.dataset.ltPid)+"&events="+ev;';
+		$out .= 'fetch(u,{credentials:"same-origin",headers:{"X-Requested-With":"XMLHttpRequest"}})';
+		$out .= '.then(function(r){if(!r.ok){throw 0;}return r.text();})';
+		$out .= '.then(function(html){panel.innerHTML=html;panel.setAttribute("data-lt-loaded","1");})';
+		$out .= '.catch(function(){panel.innerHTML="<div class=\'dealgraph-empty\'>"+b.dataset.ltFailed+"</div>";});';
+		$out .= '};';
+		// Open / close the panel (and its toolbar); lazy-load on first open.
+		$out .= 'window.leadtrackerDealMapToggle=function(b){';
+		$out .= 'var wrap=b.parentNode;';
+		$out .= 'var panel=wrap.querySelector(".leadtracker-dealmap-panel");';
+		$out .= 'var bar=wrap.querySelector(".leadtracker-dealmap-toolbar");';
+		$out .= 'if(!panel){return;}';
+		$out .= 'var open=panel.style.display!=="none";';
+		$out .= 'if(open){panel.style.display="none";if(bar){bar.style.display="none";}b.setAttribute("aria-expanded","false");b.classList.remove("lt-open");return;}';
+		$out .= 'panel.style.display="";if(bar){bar.style.display="";}b.setAttribute("aria-expanded","true");b.classList.add("lt-open");';
+		$out .= 'if(panel.getAttribute("data-lt-loaded")==="1"){return;}';
+		$out .= 'leadtrackerDealMapFetch(wrap);';
+		$out .= '};';
+		// Events switch flipped: re-fetch the graph with the new state.
+		$out .= 'window.leadtrackerDealMapEvents=function(cb){';
+		$out .= 'var wrap=cb.closest(".leadtracker-dealmap");';
+		$out .= 'if(wrap){leadtrackerDealMapFetch(wrap);}';
+		$out .= '};';
+		$out .= '}';
 		$out .= '</script>';
 
 		return $out;

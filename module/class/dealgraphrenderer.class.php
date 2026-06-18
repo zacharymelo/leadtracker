@@ -41,6 +41,11 @@ class DealGraphRenderer
 	 *             sits higher). When false, a sibling row is flat. */
 	public $dateLayout = true;
 
+	/** @var bool  Current state of the "Events" switch rendered beside the legend
+	 *             (checked = events are showing). Set from the resolver's
+	 *             includeEvents so the control reflects what is on screen. */
+	public $showEvents = false;
+
 	/** @var int  Vertical pixels each successive (later) sibling drops. */
 	const STAGGER_STEP = 18;
 
@@ -431,11 +436,19 @@ class DealGraphRenderer
 			'dead'    => 'LeadtrackerLegendDead',
 		);
 		$out = '<div class="dealgraph-legend">';
+		$out .= '<span class="dealgraph-legend-states">';
 		foreach ($items as $state => $key) {
 			$out .= '<span class="dealgraph-legend-item">'
 				.'<span class="dealgraph-dot dealgraph-state-'.$state.'"></span>'
 				.dol_escape_htmltag($langs->trans($key)).'</span>';
 		}
+		$out .= '</span>';
+		// Events show/hide switch, sat beside the status row. Toggling it re-fetches
+		// the graph with the opposite events state (handled by the panel's JS).
+		$out .= '<label class="dealgraph-events-toggle" title="'.dol_escape_htmltag($langs->trans('LeadtrackerDealEventsToggleHelp')).'">';
+		$out .= '<input type="checkbox" class="leadtracker-dealmap-events-cb"'.($this->showEvents ? ' checked' : '').' onchange="leadtrackerDealMapEvents(this)"> ';
+		$out .= dol_escape_htmltag($langs->trans('LeadtrackerDealEventsToggle'));
+		$out .= '</label>';
 		$out .= '</div>';
 		return $out;
 	}

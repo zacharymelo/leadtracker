@@ -96,6 +96,8 @@ $renderer = new DealGraphRenderer();
 $renderer->opEnabled = $resolver->opEnabled;
 // Date layout (earlier siblings sit higher) is on unless the admin disabled it.
 $renderer->dateLayout = (getDolGlobalString('LEADTRACKER_DEAL_DATE_LAYOUT', '1') == '1');
+// Reflect the current events state on the in-graph "Events" switch.
+$renderer->showEvents = $resolver->includeEvents;
 
 // Fragment only — no page chrome. The caller injects this into the panel.
 top_httphead('text/html');

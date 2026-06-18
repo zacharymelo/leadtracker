@@ -431,9 +431,10 @@ class ActionsLeadtracker
 		$label   = $langs->trans('LeadtrackerDealMap');
 		$loading = $langs->trans('LeadtrackerDealLoading');
 		$failed  = $langs->trans('LeadtrackerDealError');
-		$evLabel = $langs->trans('LeadtrackerDealEventsToggle');
 
-		// Default position of the per-view "Events" switch.
+		// Default position of the per-view "Events" switch — used for the first
+		// load; thereafter the in-graph switch (rendered beside the legend) carries
+		// the state across re-fetches.
 		$evDefault = (getDolGlobalString('LEADTRACKER_DEAL_EVENTS', '0') == '1');
 
 		$out  = '<div class="leadtracker-dealmap">';
@@ -442,21 +443,12 @@ class ActionsLeadtracker
 		$out .= ' data-lt-pid="'.(int) $projectId.'"';
 		$out .= ' data-lt-loading="'.dol_escape_htmltag($loading).'"';
 		$out .= ' data-lt-failed="'.dol_escape_htmltag($failed).'"';
+		$out .= ' data-lt-events="'.($evDefault ? '1' : '0').'"';
 		$out .= ' aria-expanded="false"';
 		$out .= ' onclick="leadtrackerDealMapToggle(this)">';
 		$out .= '<span class="leadtracker-dealmap-caret">&#9656;</span> ';
 		$out .= dol_escape_htmltag($label);
 		$out .= '</button>';
-
-		// Toolbar: the "Events" show/hide switch. Only meaningful once the map is
-		// open, so it stays hidden until then. Its initial state comes from the
-		// configured default; flipping it re-fetches the graph with ?events=0/1.
-		$out .= '<div class="leadtracker-dealmap-toolbar" style="display:none;">';
-		$out .= '<label class="leadtracker-dealmap-events">';
-		$out .= '<input type="checkbox" class="leadtracker-dealmap-events-cb"'.($evDefault ? ' checked' : '').' onchange="leadtrackerDealMapEvents(this)"> ';
-		$out .= dol_escape_htmltag($evLabel);
-		$out .= '</label>';
-		$out .= '</div>';
 
 		$out .= '<div class="leadtracker-dealmap-panel" style="display:none;" data-lt-loaded="0"></div>';
 		$out .= '</div>';
@@ -470,7 +462,9 @@ class ActionsLeadtracker
 		$out .= 'var b=wrap.querySelector(".leadtracker-dealmap-toggle");';
 		$out .= 'var cb=wrap.querySelector(".leadtracker-dealmap-events-cb");';
 		$out .= 'if(!panel||!b){return;}';
-		$out .= 'var ev=(cb&&cb.checked)?"1":"0";';
+		// First load: no in-graph switch yet → use the configured default. After
+		// that the rendered switch carries the state.
+		$out .= 'var ev=cb?(cb.checked?"1":"0"):(b.dataset.ltEvents||"0");';
 		$out .= 'panel.innerHTML="<div class=\'dealgraph-empty\'>"+b.dataset.ltLoading+"</div>";';
 		$out .= 'var u=b.dataset.ltUrl+(b.dataset.ltUrl.indexOf("?")>-1?"&":"?")+"projectid="+encodeURIComponent(b.dataset.ltPid)+"&events="+ev;';
 		$out .= 'fetch(u,{credentials:"same-origin",headers:{"X-Requested-With":"XMLHttpRequest"}})';
@@ -482,11 +476,10 @@ class ActionsLeadtracker
 		$out .= 'window.leadtrackerDealMapToggle=function(b){';
 		$out .= 'var wrap=b.parentNode;';
 		$out .= 'var panel=wrap.querySelector(".leadtracker-dealmap-panel");';
-		$out .= 'var bar=wrap.querySelector(".leadtracker-dealmap-toolbar");';
 		$out .= 'if(!panel){return;}';
 		$out .= 'var open=panel.style.display!=="none";';
-		$out .= 'if(open){panel.style.display="none";if(bar){bar.style.display="none";}b.setAttribute("aria-expanded","false");b.classList.remove("lt-open");return;}';
-		$out .= 'panel.style.display="";if(bar){bar.style.display="";}b.setAttribute("aria-expanded","true");b.classList.add("lt-open");';
+		$out .= 'if(open){panel.style.display="none";b.setAttribute("aria-expanded","false");b.classList.remove("lt-open");return;}';
+		$out .= 'panel.style.display="";b.setAttribute("aria-expanded","true");b.classList.add("lt-open");';
 		$out .= 'if(panel.getAttribute("data-lt-loaded")==="1"){return;}';
 		$out .= 'leadtrackerDealMapFetch(wrap);';
 		$out .= '};';

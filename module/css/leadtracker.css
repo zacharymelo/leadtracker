@@ -350,26 +350,6 @@
 	transform: rotate(90deg);
 }
 
-.leadtracker-dealmap-toolbar {
-	margin-top: 8px;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-}
-.leadtracker-dealmap-events {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	font-size: 12px;
-	cursor: pointer;
-	color: var(--colortexttitle, #333);
-	user-select: none;
-}
-.leadtracker-dealmap-events-cb {
-	cursor: pointer;
-	margin: 0;
-}
-
 .leadtracker-dealmap-panel {
 	margin-top: 8px;
 	padding: 14px 10px;
@@ -403,15 +383,37 @@
 .dealgraph-legend {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 12px;
 	margin-bottom: 12px;
 	font-size: 11px;
 	color: var(--colortextgrey, #777);
+}
+.dealgraph-legend-states {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
 }
 .dealgraph-legend-item {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
+}
+/* Events show/hide switch, sat at the end of the legend row */
+.dealgraph-events-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	cursor: pointer;
+	color: var(--colortextgrey, #777);
+	user-select: none;
+	white-space: nowrap;
+}
+.dealgraph-events-toggle .leadtracker-dealmap-events-cb {
+	cursor: pointer;
+	margin: 0;
 }
 .dealgraph-dot {
 	display: inline-block;

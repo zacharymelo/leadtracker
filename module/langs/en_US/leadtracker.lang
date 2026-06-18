@@ -166,6 +166,7 @@ LeadtrackerEdgeEvent = activity
 LeadtrackerDealEvents = Show events in the deal map by default
 LeadtrackerDealEventsHelp = Sets the starting position of the "Events" switch on the deal map. When on, calls, emails and meetings (hung off the document they relate to, or the lead) show by default; when off they are hidden until the viewer flips the switch. The switch is always available either way.
 LeadtrackerDealEventsToggle = Events
+LeadtrackerDealEventsToggleHelp = Show or hide agenda events (calls, emails, meetings) in this deal map.
 
 # Deal map — warranty & calls
 LeadtrackerNodeWarranty = Warranty

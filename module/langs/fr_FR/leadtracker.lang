@@ -166,6 +166,7 @@ LeadtrackerEdgeEvent = activité
 LeadtrackerDealEvents = Afficher les événements dans la carte de l'affaire par défaut
 LeadtrackerDealEventsHelp = Définit la position initiale de l'interrupteur « Événements » de la carte de l'affaire. Activé, les appels, e-mails et rendez-vous (rattachés au document concerné ou au prospect) sont affichés par défaut ; désactivé, ils sont masqués jusqu'à ce que l'utilisateur actionne l'interrupteur. L'interrupteur reste disponible dans tous les cas.
 LeadtrackerDealEventsToggle = Événements
+LeadtrackerDealEventsToggleHelp = Afficher ou masquer les événements d'agenda (appels, e-mails, rendez-vous) dans cette carte de l'affaire.
 
 # Deal map — warranty & calls
 LeadtrackerNodeWarranty = Garantie

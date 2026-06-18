@@ -436,6 +436,12 @@ class DealGraphRenderer
 			'dead'    => 'LeadtrackerLegendDead',
 		);
 		$out = '<div class="dealgraph-legend">';
+		// Events show/hide switch leads the row, ahead of the status list. Toggling
+		// it re-fetches the graph with the opposite events state (panel JS).
+		$out .= '<label class="dealgraph-events-toggle" title="'.dol_escape_htmltag($langs->trans('LeadtrackerDealEventsToggleHelp')).'">';
+		$out .= '<input type="checkbox" class="leadtracker-dealmap-events-cb"'.($this->showEvents ? ' checked' : '').' onchange="leadtrackerDealMapEvents(this)"> ';
+		$out .= dol_escape_htmltag($langs->trans('LeadtrackerDealEventsToggle'));
+		$out .= '</label>';
 		$out .= '<span class="dealgraph-legend-states">';
 		foreach ($items as $state => $key) {
 			$out .= '<span class="dealgraph-legend-item">'
@@ -443,12 +449,6 @@ class DealGraphRenderer
 				.dol_escape_htmltag($langs->trans($key)).'</span>';
 		}
 		$out .= '</span>';
-		// Events show/hide switch, sat beside the status row. Toggling it re-fetches
-		// the graph with the opposite events state (handled by the panel's JS).
-		$out .= '<label class="dealgraph-events-toggle" title="'.dol_escape_htmltag($langs->trans('LeadtrackerDealEventsToggleHelp')).'">';
-		$out .= '<input type="checkbox" class="leadtracker-dealmap-events-cb"'.($this->showEvents ? ' checked' : '').' onchange="leadtrackerDealMapEvents(this)"> ';
-		$out .= dol_escape_htmltag($langs->trans('LeadtrackerDealEventsToggle'));
-		$out .= '</label>';
 		$out .= '</div>';
 		return $out;
 	}

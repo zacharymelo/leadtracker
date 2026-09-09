@@ -465,9 +465,12 @@ class LeadProgressResolver
 		$pid      = (int) $projectId;
 		$tEsc     = $this->db->escape($table);
 		$statusOp = $exact ? " = ".$status : " >= ".$status;
+		// Creation-date column name isn't consistent across Dolibarr tables:
+		// propal and facture use "datec", but commande uses "date_creation".
+		$creationCol = ($table === 'commande') ? 'date_creation' : 'datec';
 		// date_valid is the system-recorded validation timestamp. NULL dates sorted
 		// last so a properly validated record always wins over one missing a date.
-		$dateExpr = "COALESCE(date_valid, datec)";
+		$dateExpr = "COALESCE(date_valid, ".$creationCol.")";
 		$orderBy  = " ORDER BY (".$dateExpr." IS NULL) ASC, ".$dateExpr." ASC, rowid ASC LIMIT 1";
 
 		$found = false;
@@ -488,7 +491,8 @@ class LeadProgressResolver
 		}
 
 		// Method 2: element_element links added after document creation.
-		$sql2 = "SELECT d.rowid, COALESCE(d.date_valid, d.datec) as evdate"
+		$dateExpr2 = "COALESCE(d.date_valid, d.".$creationCol.")";
+		$sql2 = "SELECT d.rowid, ".$dateExpr2." as evdate"
 			." FROM ".$dbTable." d"
 			." INNER JOIN ".$eeTable." ee ON ("
 			."  (ee.fk_source = ".$pid." AND ee.sourcetype = 'project'"
@@ -499,8 +503,8 @@ class LeadProgressResolver
 			." )"
 			." WHERE d.fk_statut".$statusOp
 			." AND d.entity IN (".getEntity($table).")"
-			." ORDER BY (COALESCE(d.date_valid, d.datec) IS NULL) ASC,"
-			." COALESCE(d.date_valid, d.datec) ASC, d.rowid ASC LIMIT 1";
+			." ORDER BY (".$dateExpr2." IS NULL) ASC,"
+			." ".$dateExpr2." ASC, d.rowid ASC LIMIT 1";
 		$res2 = $this->db->query($sql2);
 		if ($res2 && ($obj2 = $this->db->fetch_object($res2))) {
 			$found = true;

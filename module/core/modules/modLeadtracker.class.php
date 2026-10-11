@@ -58,7 +58,7 @@ class modLeadtracker extends DolibarrModules
 		$this->editor_name = 'Lead Tracker contributors';
 		$this->editor_url = '';
 
-		$this->version = '1.10.5';
+		$this->version = '1.15.0';
 
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 
@@ -111,6 +111,28 @@ class modLeadtracker extends DolibarrModules
 			array('LEADTRACKER_AMOUNT_MODE',        'chaine', 'manual', 'Amount source: manual | auto (LTV hierarchy)', 0),
 			array('LEADTRACKER_PERCENT_MODE',       'chaine', 'manual', 'Percent source: manual | stage_default', 0),
 			array('LEADTRACKER_AMOUNT_EXTRAFIELD',  'chaine', '',       'Project extrafield code used as baseline amount (empty = disabled)', 0),
+			array('LEADTRACKER_WEBHOOK_ENABLED',    'chaine', '0',      'Send stage changes to the outbound webhook', 0),
+			array('LEADTRACKER_WEBHOOK_URL',        'chaine', '',       'Outbound webhook destination URL', 0),
+			array('LEADTRACKER_WEBHOOK_CONTACT',    'chaine', '0',      'Include unhashed contact details in the outbound webhook', 0),
+		);
+
+		// Delivers queued stage events. Recording happens inside the transaction of
+		// the change itself, so sending is left to this job.
+		$this->cronjobs = array(
+			0 => array(
+				'label'         => 'LeadtrackerCronDeliver',
+				'jobtype'       => 'method',
+				'class'         => '/leadtracker/class/leadtrackerevents.class.php',
+				'objectname'    => 'LeadtrackerEvents',
+				'method'        => 'deliverPending',
+				'parameters'    => '',
+				'comment'       => 'Deliver pending pipeline stage events to the outbound webhook',
+				'frequency'     => 5,
+				'unitfrequency' => 60,
+				'status'        => 1,
+				'test'          => 'isModEnabled("leadtracker")',
+				'priority'      => 50,
+			),
 		);
 
 		$this->rights = array();
@@ -125,7 +147,8 @@ class modLeadtracker extends DolibarrModules
 	}
 
 	/**
-	 *  Called when module is enabled. Creates the DB table and registers constants/permissions.
+	 *  Called when module is enabled. Creates the DB table, the attribution extrafield, and registers
+	 *  constants/permissions.
 	 *  Uses _load_tables() so run_sql() substitutes  with MAIN_DB_PREFIX for non-default prefixes.
 	 *
 	 *  @param  string  $options  Options
@@ -140,7 +163,49 @@ class modLeadtracker extends DolibarrModules
 			return -1;
 		}
 
+		// Never blocks activation: the tracker works without the attribution field.
+		$this->createAttributionExtrafield();
+
 		return $this->_init(array(), $options);
+	}
+
+	/**
+	 *  Create the project extrafield that stores the opaque attribution token of a lead.
+	 *  Safe to call on every enable: an existing field (and its stored values) is left untouched.
+	 *  remove() never drops it, so disabling the module preserves the data.
+	 *
+	 *  @return int  1 if created, 0 if it already existed, <0 if KO
+	 */
+	private function createAttributionExtrafield()
+	{
+		global $conf, $langs;
+
+		$attrname = 'lt_attribution';
+		$elementtype = 'projet';
+
+		$sql = "SELECT rowid FROM ".$this->db->prefix()."extrafields";
+		$sql .= " WHERE name = '".$this->db->escape($attrname)."'";
+		$sql .= " AND elementtype = '".$this->db->escape($elementtype)."'";
+		$sql .= " AND entity IN (0, ".((int) $conf->entity).")";
+		$resql = $this->db->query($sql);
+		if ($resql && $this->db->num_rows($resql) > 0) {
+			return 0;
+		}
+
+		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
+		$extrafields = new ExtraFields($this->db);
+
+		// Long text (a token exceeds 255 chars), not editable, hidden from lists and forms (list = 0).
+		// If only the column survived (declaration deleted by hand), addExtraField() re-declares it without altering the column.
+		$result = $extrafields->addExtraField($attrname, 'LeadtrackerAttribution', 'text', 1000, '', $elementtype, 0, 0, '', '', 0, '', '0', 'LeadtrackerAttributionHelp', '', (string) $conf->entity, 'leadtracker@leadtracker', 'isModEnabled("leadtracker")');
+		if ($result <= 0) {
+			$langs->load('leadtracker@leadtracker');
+			dol_syslog(get_class($this).'::createAttributionExtrafield failed to create '.$attrname.' on '.$elementtype.': '.$extrafields->error, LOG_ERR);
+			setEventMessages($langs->trans('LeadtrackerAttributionCreateFailed', $extrafields->error), null, 'warnings');
+			return -1;
+		}
+
+		return 1;
 	}
 
 	/**

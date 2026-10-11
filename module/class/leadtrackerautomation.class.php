@@ -153,6 +153,14 @@ class LeadtrackerAutomation
 		$effectiveStatusId = ($newStatusId !== null) ? $newStatusId : $currentFkStatus;
 		$this->updateProjectValues($projectId, $effectiveStatusId);
 
+		// Recorded after the value update so the event carries the fresh amount
+		// and probability of the stage just reached.
+		if ($newStatusId !== null) {
+			dol_include_once('/leadtracker/class/leadtrackerevents.class.php');
+			$events = new LeadtrackerEvents($this->db);
+			$events->recordIfChanged($projectId, 'auto', $currentFkStatus);
+		}
+
 		return ($newStatusId !== null);
 	}
 

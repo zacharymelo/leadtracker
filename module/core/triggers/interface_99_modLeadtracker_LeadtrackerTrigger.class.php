@@ -34,7 +34,7 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 {
 	public $name        = 'InterfaceLeadtrackerTrigger';
 	public $description = 'Lead tracker automation trigger';
-	public $version     = '1.10.4';
+	public $version     = '1.15.0';
 	public $picto       = 'projectpub';
 
 	/**
@@ -69,6 +69,13 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 			require_once dol_buildpath('/leadtracker/class/leadtrackerautomation.class.php', 0);
 			$automation = new LeadtrackerAutomation($this->db);
 			$automation->recalculateValues((int) $object->id);
+			$this->recordStageEvent($action, $object);
+			return 0;
+		}
+
+		// Closing a project can be how a lead is marked won or lost.
+		if ($action === 'PROJECT_CLOSE') {
+			$this->recordStageEvent($action, $object);
 			return 0;
 		}
 
@@ -139,6 +146,34 @@ class InterfaceLeadtrackerTrigger extends DolibarrTriggers
 		}
 
 		return 0;
+	}
+
+	/**
+	 *  Record a stage event when a project save changed the pipeline stage.
+	 *
+	 *  @param  string  $action  Trigger code
+	 *  @param  object  $object  The project
+	 *  @return void
+	 */
+	private function recordStageEvent($action, $object)
+	{
+		if (empty($object->id)) {
+			return;
+		}
+
+		// The previous stage is only known when the caller kept a copy of the
+		// project before saving it (the project card does, the API may not).
+		$knownFrom = null;
+		if (!empty($object->oldcopy) && is_object($object->oldcopy)) {
+			$old = !empty($object->oldcopy->opp_status) ? $object->oldcopy->opp_status : (isset($object->oldcopy->fk_opp_status) ? $object->oldcopy->fk_opp_status : 0);
+			if ((int) $old > 0) {
+				$knownFrom = (int) $old;
+			}
+		}
+
+		require_once dol_buildpath('/leadtracker/class/leadtrackerevents.class.php', 0);
+		$events = new LeadtrackerEvents($this->db);
+		$events->recordIfChanged((int) $object->id, $action === 'PROJECT_CREATE' ? 'create' : 'manual', $knownFrom);
 	}
 
 	/**

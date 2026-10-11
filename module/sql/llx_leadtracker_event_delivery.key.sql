@@ -1,0 +1,2 @@
+-- Additional indexes for llx_leadtracker_event_delivery
+-- Indexes are already declared in the CREATE TABLE; nothing extra needed.

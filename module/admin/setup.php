@@ -50,6 +50,9 @@ if (!class_exists('Categorie')) {
 	require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
 }
 dol_include_once('/leadtracker/lib/leadtracker.lib.php');
+dol_include_once('/leadtracker/class/leadtrackerevents.class.php');
+dol_include_once('/leadtracker/class/leadtrackergooglefeed.class.php');
+dol_include_once('/leadtracker/class/leadtrackergoogleapi.class.php');
 
 $langs->loadLangs(array("admin", "leadtracker@leadtracker"));
 
@@ -125,6 +128,18 @@ if ($action == 'update') {
 		}
 	}
 
+	// --- What each stage is reported as ---
+	$stageReport = array();
+	foreach ($stageRowids as $sid) {
+		$category = GETPOST('report_'.$sid, 'aZ09');
+		if (in_array($category, LeadtrackerEvents::CATEGORIES, true)) {
+			$stageReport[$sid] = $category;
+		}
+	}
+	if (dolibarr_set_const($db, 'LEADTRACKER_STAGE_REPORT', json_encode($stageReport), 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+
 	// --- Data sync ---
 	$amountMode = GETPOST('LEADTRACKER_AMOUNT_MODE', 'alpha');
 	if (!in_array($amountMode, array('manual', 'auto'))) {
@@ -143,6 +158,88 @@ if ($action == 'update') {
 	}
 	if (dolibarr_set_const($db, 'LEADTRACKER_PERCENT_MODE', $percentMode, 'chaine', 0, '', $conf->entity) < 0) {
 		$error++;
+	}
+
+	// --- Outbound stage events ---
+	$webhookUrl = trim(GETPOST('LEADTRACKER_WEBHOOK_URL', 'alphanohtml'));
+	$webhookSchemes = getDolGlobalString('LEADTRACKER_WEBHOOK_ALLOW_LOCAL') === '1' ? '(https?)' : '(https)';
+	if ($webhookUrl !== '' && (!filter_var($webhookUrl, FILTER_VALIDATE_URL) || !preg_match('/^'.$webhookSchemes.':\/\//i', $webhookUrl))) {
+		setEventMessages($langs->trans('LeadtrackerWebhookUrlInvalid'), null, 'errors');
+		$error++;
+	} elseif (dolibarr_set_const($db, 'LEADTRACKER_WEBHOOK_URL', $webhookUrl, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+	foreach (array('LEADTRACKER_WEBHOOK_ENABLED', 'LEADTRACKER_WEBHOOK_CONTACT') as $key) {
+		if (dolibarr_set_const($db, $key, GETPOST($key, 'alpha') ? '1' : '0', 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	}
+	// The signing secret is created the first time it is needed and only replaced on request.
+	if (getDolGlobalString('LEADTRACKER_WEBHOOK_SECRET') === '' || GETPOST('LEADTRACKER_WEBHOOK_REGEN', 'alpha')) {
+		if (dolibarr_set_const($db, 'LEADTRACKER_WEBHOOK_SECRET', bin2hex(random_bytes(24)), 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	}
+
+	// --- Google Ads conversion file ---
+	foreach (array('LEADTRACKER_GOOGLE_FEED_ENABLED', 'LEADTRACKER_GOOGLE_HASHED_CONTACT') as $key) {
+		if (dolibarr_set_const($db, $key, GETPOST($key, 'alpha') ? '1' : '0', 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	}
+	foreach (LeadtrackerGoogleFeed::CATEGORIES as $category) {
+		$convName = dol_trunc(trim(GETPOST('LEADTRACKER_GOOGLE_CONV_'.strtoupper($category), 'alphanohtml')), 100, 'right', 'UTF-8', 1);
+		if (dolibarr_set_const($db, 'LEADTRACKER_GOOGLE_CONV_'.strtoupper($category), $convName, 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	}
+	$googleConsent = GETPOST('LEADTRACKER_GOOGLE_CONSENT', 'alpha');
+	if (!in_array($googleConsent, array('', 'Granted', 'Denied'), true)) {
+		$googleConsent = '';
+	}
+	if (dolibarr_set_const($db, 'LEADTRACKER_GOOGLE_CONSENT', $googleConsent, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+	$googleUser = preg_replace('/[^A-Za-z0-9_.\-]/', '', GETPOST('LEADTRACKER_GOOGLE_FEED_USER', 'alpha'));
+	if ($googleUser === '') {
+		$googleUser = 'leadtracker';
+	}
+	if (dolibarr_set_const($db, 'LEADTRACKER_GOOGLE_FEED_USER', $googleUser, 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+	if (getDolGlobalString('LEADTRACKER_GOOGLE_FEED_PASSWORD') === '' || GETPOST('LEADTRACKER_GOOGLE_FEED_REGEN', 'alpha')) {
+		if (dolibarr_set_const($db, 'LEADTRACKER_GOOGLE_FEED_PASSWORD', bin2hex(random_bytes(16)), 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	}
+
+	// --- Google Ads through the API ---
+	if (dolibarr_set_const($db, 'LEADTRACKER_GOOGLE_API_ENABLED', GETPOST('LEADTRACKER_GOOGLE_API_ENABLED', 'alpha') ? '1' : '0', 'chaine', 0, '', $conf->entity) < 0) {
+		$error++;
+	}
+	$googleIdKeys = array('LEADTRACKER_GOOGLE_CUSTOMER_ID', 'LEADTRACKER_GOOGLE_LOGIN_CUSTOMER_ID');
+	foreach (LeadtrackerGoogleFeed::CATEGORIES as $category) {
+		$googleIdKeys[] = 'LEADTRACKER_GOOGLE_ACTION_'.strtoupper($category);
+	}
+	foreach ($googleIdKeys as $key) {
+		// Customer IDs are usually written with dashes; only the digits matter.
+		$digits = substr(preg_replace('/\D/', '', GETPOST($key, 'alpha')), 0, 20);
+		if (dolibarr_set_const($db, $key, $digits, 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	}
+	// The key is write-only: an empty field keeps the stored one.
+	$googleKeyInput = trim(GETPOST('LEADTRACKER_GOOGLE_SA_KEY', 'none'));
+	if ($googleKeyInput !== '') {
+		$googleKeyClean = LeadtrackerGoogleApi::normalizeServiceAccountKey($googleKeyInput);
+		if ($googleKeyClean === null) {
+			setEventMessages($langs->trans('LeadtrackerGoogleKeyInvalid'), null, 'errors');
+			$error++;
+		} elseif (dolibarr_set_const($db, 'LEADTRACKER_GOOGLE_SA_KEY', $googleKeyClean, 'chaine', 0, '', $conf->entity) < 0) {
+			$error++;
+		}
+	} elseif (GETPOST('LEADTRACKER_GOOGLE_SA_KEY_REMOVE', 'alpha')) {
+		dolibarr_del_const($db, 'LEADTRACKER_GOOGLE_SA_KEY', $conf->entity);
 	}
 
 	// --- Display ---
@@ -178,6 +275,43 @@ if ($action == 'update') {
 	} else {
 		setEventMessages($langs->trans("Error"), null, 'errors');
 	}
+}
+
+if ($action == 'googletest') {
+	$googleApi = new LeadtrackerGoogleApi($db);
+	$result = $googleApi->sendTest();
+	if ($result['ok']) {
+		setEventMessages($langs->trans('LeadtrackerGoogleApiTestOk'), null, 'mesgs');
+	} else {
+		setEventMessages($langs->trans('LeadtrackerGoogleApiTestKo', $result['error']), null, 'errors');
+	}
+	header('Location: '.$_SERVER['PHP_SELF']);
+	exit;
+}
+
+if (in_array($action, array('webhooktest', 'webhookdeliver', 'webhookrequeue'))) {
+	$events = new LeadtrackerEvents($db);
+
+	if ($action == 'webhooktest') {
+		$result = $events->sendTest();
+		if ($result['ok']) {
+			setEventMessages($langs->trans('LeadtrackerWebhookTestOk', $result['code']), null, 'mesgs');
+		} else {
+			setEventMessages($langs->trans('LeadtrackerWebhookTestKo', $result['error']), null, 'errors');
+		}
+	} elseif ($action == 'webhookdeliver') {
+		if ($events->deliverPending() < 0) {
+			setEventMessages($events->error, null, 'errors');
+		} else {
+			setEventMessages($langs->trans('LeadtrackerWebhookDelivered', $events->output), null, 'mesgs');
+		}
+	} else {
+		$count = $events->requeueFailed();
+		setEventMessages($langs->trans('LeadtrackerWebhookRequeued', max(0, $count)), null, $count < 0 ? 'errors' : 'mesgs');
+	}
+
+	header('Location: '.$_SERVER['PHP_SELF']);
+	exit;
 }
 
 
@@ -267,10 +401,18 @@ foreach ($allConditions as $ctype => $langKey) {
 	print dol_escape_htmltag($shortLabel);
 	print '</td>';
 }
+print '<td title="'.dol_escape_htmltag($langs->trans("LeadtrackerReportAsHelp")).'">'.$langs->trans("LeadtrackerReportAs").'</td>';
 print '</tr>';
 
+$reportHelper = new LeadtrackerEvents($db);
+$reportMap = $reportHelper->getCategoryMap();
+$reportOptions = array();
+foreach (LeadtrackerEvents::CATEGORIES as $category) {
+	$reportOptions[$category] = $langs->trans('LeadtrackerCategory'.ucfirst($category));
+}
+
 if (empty($stages)) {
-	print '<tr class="oddeven"><td colspan="'.(1 + count($allConditions)).'">';
+	print '<tr class="oddeven"><td colspan="'.(2 + count($allConditions)).'">';
 	print '<span class="opacitymedium">'.$langs->trans("LeadtrackerNoStages").'</span> ';
 	print '<a href="'.DOL_URL_ROOT.'/admin/dict.php?id=lead_status">'.$langs->trans("LeadtrackerGoToDictionary").'</a>';
 	print '</td></tr>';
@@ -287,11 +429,12 @@ if (empty($stages)) {
 			print '<input type="checkbox" name="cond_'.$sid.'_'.$ctype.'" value="1"'.$checked.'>';
 			print '</td>';
 		}
+		print '<td>'.$form->selectarray('report_'.$sid, $reportOptions, isset($reportMap[$sid]) ? $reportMap[$sid] : 'progress', 0, 0, 0, '', 0, 0, 0, '', 'maxwidth200').'</td>';
 		print '</tr>';
 	}
 }
-print '<tr><td colspan="'.(1 + count($allConditions)).'">';
-print '<span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAutoSectionHelp").'</span>';
+print '<tr><td colspan="'.(2 + count($allConditions)).'">';
+print '<span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerAutoSectionHelp").'<br>'.$langs->trans("LeadtrackerReportAsHelp").'</span>';
 print '</td></tr>';
 print '</table>';
 
@@ -327,6 +470,149 @@ print $form->selectarray('LEADTRACKER_PERCENT_MODE', array(
 ), getDolGlobalString('LEADTRACKER_PERCENT_MODE', 'manual'), 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
 print '</td></tr>';
 print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerPercentModeHelp").'</span></td></tr>';
+
+print '</table>';
+
+print '<br>';
+
+
+// ============================================================
+// SECTION 3 — Outbound stage events
+// ============================================================
+
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerWebhookTitle").'</td></tr>';
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerWebhookHelp").'</span></td></tr>';
+
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerWebhookEnabled").'</td><td>';
+print '<input type="checkbox" name="LEADTRACKER_WEBHOOK_ENABLED" value="1"'.(getDolGlobalString('LEADTRACKER_WEBHOOK_ENABLED') === '1' ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerWebhookUrl").'</td><td>';
+print '<input type="url" name="LEADTRACKER_WEBHOOK_URL" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_WEBHOOK_URL')).'" placeholder="https://" class="minwidth400">';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerWebhookSecret").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerWebhookSecretHelp").'</span></td><td>';
+$webhookSecret = getDolGlobalString('LEADTRACKER_WEBHOOK_SECRET');
+if ($webhookSecret !== '') {
+	print '<input type="text" readonly value="'.dol_escape_htmltag($webhookSecret).'" class="minwidth400" onclick="this.select()">';
+	print '<br><label><input type="checkbox" name="LEADTRACKER_WEBHOOK_REGEN" value="1"> '.$langs->trans("LeadtrackerWebhookRegen").'</label>';
+} else {
+	print '<span class="opacitymedium">'.$langs->trans("LeadtrackerWebhookSecretPending").'</span>';
+}
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerWebhookContact").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerWebhookContactHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_WEBHOOK_CONTACT" value="1"'.(getDolGlobalString('LEADTRACKER_WEBHOOK_CONTACT') === '1' ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '</table>';
+
+print '<br>';
+
+
+// ============================================================
+// SECTION 3b — Google Ads conversion file
+// ============================================================
+
+$googleFeed = new LeadtrackerGoogleFeed($db);
+$googleFeed->buildRows();
+$googleNames = $googleFeed->getConversionNames();
+
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerGoogleTitle").'</td></tr>';
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleHelp").'</span></td></tr>';
+
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerGoogleEnabled").'</td><td>';
+print '<input type="checkbox" name="LEADTRACKER_GOOGLE_FEED_ENABLED" value="1"'.(getDolGlobalString('LEADTRACKER_GOOGLE_FEED_ENABLED') === '1' ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleUrl").'</td><td>';
+print '<input type="text" readonly value="'.dol_escape_htmltag(dol_buildpath('/leadtracker/public/googleads.php', 2).'/conversions.csv').'" class="minwidth500" onclick="this.select()">';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleUser").'</td><td>';
+print '<input type="text" name="LEADTRACKER_GOOGLE_FEED_USER" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_GOOGLE_FEED_USER', 'leadtracker')).'" size="20">';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGooglePassword").'</td><td>';
+$googlePassword = getDolGlobalString('LEADTRACKER_GOOGLE_FEED_PASSWORD');
+if ($googlePassword !== '') {
+	print '<input type="text" readonly value="'.dol_escape_htmltag($googlePassword).'" class="minwidth300" onclick="this.select()">';
+	print '<br><label><input type="checkbox" name="LEADTRACKER_GOOGLE_FEED_REGEN" value="1"> '.$langs->trans("LeadtrackerGoogleRegen").'</label>';
+} else {
+	print '<span class="opacitymedium">'.$langs->trans("LeadtrackerWebhookSecretPending").'</span>';
+}
+print '</td></tr>';
+
+foreach (LeadtrackerGoogleFeed::CATEGORIES as $category) {
+	print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleConvName", $langs->transnoentitiesnoconv('LeadtrackerCategory'.ucfirst($category))).'</td><td>';
+	print '<input type="text" name="LEADTRACKER_GOOGLE_CONV_'.strtoupper($category).'" value="'.dol_escape_htmltag($googleNames[$category]).'" class="minwidth300" maxlength="100">';
+	print '</td></tr>';
+}
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleConvNameHelp").'</span></td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleHashed").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleHashedHelp").'</span></td><td>';
+print '<input type="checkbox" name="LEADTRACKER_GOOGLE_HASHED_CONTACT" value="1"'.(getDolGlobalString('LEADTRACKER_GOOGLE_HASHED_CONTACT') === '1' ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleConsent").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleConsentHelp").'</span></td><td>';
+print $form->selectarray('LEADTRACKER_GOOGLE_CONSENT', array(
+	''        => $langs->trans('LeadtrackerGoogleConsentUnset'),
+	'Granted' => $langs->trans('LeadtrackerGoogleConsentGranted'),
+	'Denied'  => $langs->trans('LeadtrackerGoogleConsentDenied'),
+), getDolGlobalString('LEADTRACKER_GOOGLE_CONSENT'), 0, 0, 0, '', 0, 0, 0, '', 'maxwidth300');
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleStats", LeadtrackerGoogleFeed::WINDOW_DAYS).'</td><td>';
+print $langs->trans("LeadtrackerGoogleStatsDetail", $googleFeed->stats['exported'], $googleFeed->stats['no_click_id'], $googleFeed->stats['unmapped'], $googleFeed->stats['repeat']);
+print '</td></tr>';
+
+print '</table>';
+
+print '<br>';
+
+// Same conversions, pushed through the API instead of fetched as a file.
+$googleApi = new LeadtrackerGoogleApi($db);
+$googleAccount = $googleApi->getServiceAccount();
+$googleActions = $googleApi->getActionIds();
+$eventsForCounts = new LeadtrackerEvents($db);
+$googleCounts = $eventsForCounts->countDeliveries(LeadtrackerGoogleApi::DESTINATION);
+
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.$langs->trans("LeadtrackerGoogleApiTitle").'</td></tr>';
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleApiHelp").'</span></td></tr>';
+
+print '<tr class="oddeven"><td style="width:40%">'.$langs->trans("LeadtrackerGoogleApiEnabled").'</td><td>';
+print '<input type="checkbox" name="LEADTRACKER_GOOGLE_API_ENABLED" value="1"'.(getDolGlobalString('LEADTRACKER_GOOGLE_API_ENABLED') === '1' ? ' checked' : '').'>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleCustomerId").'</td><td>';
+print '<input type="text" name="LEADTRACKER_GOOGLE_CUSTOMER_ID" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_GOOGLE_CUSTOMER_ID')).'" placeholder="1234567890" size="16">';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleLoginCustomerId").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleLoginCustomerIdHelp").'</span></td><td>';
+print '<input type="text" name="LEADTRACKER_GOOGLE_LOGIN_CUSTOMER_ID" value="'.dol_escape_htmltag(getDolGlobalString('LEADTRACKER_GOOGLE_LOGIN_CUSTOMER_ID')).'" size="16">';
+print '</td></tr>';
+
+foreach (LeadtrackerGoogleFeed::CATEGORIES as $category) {
+	print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleActionId", $langs->transnoentitiesnoconv('LeadtrackerCategory'.ucfirst($category))).'</td><td>';
+	print '<input type="text" name="LEADTRACKER_GOOGLE_ACTION_'.strtoupper($category).'" value="'.dol_escape_htmltag($googleActions[$category]).'" size="16">';
+	print '</td></tr>';
+}
+print '<tr><td colspan="2"><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleActionIdHelp").'</span></td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleKey").'<br><span class="opacitymedium" style="font-size:11px;">'.$langs->trans("LeadtrackerGoogleKeyHelp").'</span></td><td>';
+if ($googleAccount !== null) {
+	print $langs->trans("LeadtrackerGoogleKeyStored", dol_escape_htmltag($googleAccount['client_email']));
+	print ' <label><input type="checkbox" name="LEADTRACKER_GOOGLE_SA_KEY_REMOVE" value="1"> '.$langs->trans("LeadtrackerGoogleKeyRemove").'</label><br>';
+}
+print '<textarea name="LEADTRACKER_GOOGLE_SA_KEY" rows="3" class="quatrevingtpercent" autocomplete="off" spellcheck="false" placeholder="'.dol_escape_htmltag($langs->trans($googleAccount !== null ? "LeadtrackerGoogleKeyReplace" : "LeadtrackerGoogleKeyPaste")).'"></textarea>';
+print '</td></tr>';
+
+print '<tr class="oddeven"><td>'.$langs->trans("LeadtrackerGoogleApiStatus").'</td><td>';
+print $langs->trans("LeadtrackerGoogleApiStatusDetail", $googleCounts[LeadtrackerEvents::STATUS_SENT], $googleCounts[LeadtrackerEvents::STATUS_PENDING], $googleCounts[LeadtrackerEvents::STATUS_FAILED]);
+print '</td></tr>';
 
 print '</table>';
 
@@ -440,6 +726,60 @@ print '</table>';
 
 print $form->buttonsSaveCancel("Save", '');
 print '</form>';
+
+
+// ============================================================
+// Outbound stage events — queue
+// ============================================================
+
+$eventsHelper = new LeadtrackerEvents($db);
+$recentEvents = $eventsHelper->fetchRecent(10);
+$eventStatusLabels = array(
+	LeadtrackerEvents::STATUS_PENDING => 'LeadtrackerWebhookStatusPending',
+	LeadtrackerEvents::STATUS_SENT    => 'LeadtrackerWebhookStatusSent',
+	LeadtrackerEvents::STATUS_FAILED  => 'LeadtrackerWebhookStatusFailed',
+	LeadtrackerEvents::STATUS_SKIPPED => 'LeadtrackerWebhookStatusSkipped',
+);
+
+print '<br>';
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre">';
+print '<td>'.$langs->trans("LeadtrackerWebhookRecent").'</td>';
+print '<td>'.$langs->trans("Project").'</td>';
+print '<td>'.$langs->trans("LeadtrackerWebhookColStage").'</td>';
+print '<td class="right">'.$langs->trans("Amount").'</td>';
+print '<td class="right">%</td>';
+print '<td>'.$langs->trans("Status").'</td>';
+print '</tr>';
+if (empty($recentEvents)) {
+	print '<tr class="oddeven"><td colspan="6"><span class="opacitymedium">'.$langs->trans("LeadtrackerWebhookNoEvents").'</span></td></tr>';
+}
+foreach ($recentEvents as $ev) {
+	$statusKey = isset($eventStatusLabels[(int) $ev->delivery_status]) ? $eventStatusLabels[(int) $ev->delivery_status] : '';
+	print '<tr class="oddeven">';
+	print '<td>'.dol_print_date($db->jdate($ev->date_event), 'dayhour').' <span class="opacitymedium">'.dol_escape_htmltag($ev->source).'</span></td>';
+	print '<td><a href="'.DOL_URL_ROOT.'/projet/card.php?id='.((int) $ev->fk_project).'">'.dol_escape_htmltag($ev->ref).'</a></td>';
+	print '<td>'.dol_escape_htmltag(($ev->from_code !== null ? $ev->from_code.' → ' : '').$ev->to_code);
+	print ' <span class="opacitymedium">'.$langs->trans('LeadtrackerCategory'.ucfirst($eventsHelper->getStageCategory($ev->fk_stage_to))).'</span></td>';
+	print '<td class="right">'.($ev->opp_amount === null ? '' : price($ev->opp_amount)).'</td>';
+	print '<td class="right">'.($ev->opp_percent === null ? '' : (float) $ev->opp_percent).'</td>';
+	print '<td>'.$langs->trans($statusKey);
+	if ((int) $ev->attempts > 0 && (int) $ev->delivery_status !== LeadtrackerEvents::STATUS_SENT) {
+		print ' <span class="opacitymedium">('.((int) $ev->attempts).')</span>';
+	}
+	if (!empty($ev->last_error)) {
+		print ' <span class="opacitymedium">'.dol_escape_htmltag($ev->last_error).'</span>';
+	}
+	print '</td>';
+	print '</tr>';
+}
+print '</table>';
+
+print '<div class="tabsAction">';
+foreach (array('webhooktest' => 'LeadtrackerWebhookTest', 'googletest' => 'LeadtrackerGoogleApiTest', 'webhookdeliver' => 'LeadtrackerWebhookDeliverNow', 'webhookrequeue' => 'LeadtrackerWebhookRequeue') as $act => $label) {
+	print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action='.$act.'&token='.newToken().'">'.$langs->trans($label).'</a>';
+}
+print '</div>';
 
 print dol_get_fiche_end();
 
